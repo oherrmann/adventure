@@ -1,0 +1,538 @@
+<!-- ditxml version=0.0.1  -->
+<!--  -->
+<game>
+	<intro>You are at the entrance to an underground cave structure.
+	You hear water dripping against stone in the cave.</intro>
+	<locations>
+		<location id='Intro'>
+			<type value="chamber" />
+			<description>You are in a grassy opening in the middle of a forest.
+			To your north is a cave entrance.</description>
+			<direction dir="north" dest="A" text="" />
+			<light value="100" />
+		</location>
+		<location id='A'>
+			<type value="chamber" />
+			<description>You are just inside the cave.
+			You can still see sunlight to your south.
+			To your north is another chamber.</description>
+			<direction dir="north" dest="B" text="" />
+			<direction dir="south" dest="Intro" text="" />
+			<light value="50" />
+		</location>
+		<location id='B'>
+			<type value="chamber" />
+			<description>You are in a small inner chamber of the cave.
+			Very little light filters in from the south.
+			There is another chamber to the west.</description>
+			<direction dir="south" dest="A" text="" />
+			<direction dir="west" dest="C" text="" />
+			<light value="20" />
+			<object id="torch" description="a torch" />
+		</location>
+		<location id='C'>
+			<type value="chamber" />
+			<description>You are in a large chamber. There is almost no light.
+			You hear water to your north.</description>
+			<direction dir="east" dest="B" text="" />
+			<direction dir="north" dest="D" text="" />
+			<light value="10" />
+		</location>
+		<location id='D'>
+			<type value="chamber" />
+			<description>You seem to be in a very tight chamber. The walls are slick.</description>
+			<direction dir="south" dest="C" text="" />
+			<direction dir="east" dest="E" text="" />
+			<light value="0" />
+		</location>
+		<location id='E'>
+			<type value="chamber" />
+			<description>Another tight chamber. You feel a breeze to your north.</description>
+			<direction dir="west" dest="D" text="" />
+			<direction dir="north" dest="F-1" text="" />
+			<light value="5" />
+		</location>
+		<location id='F-1' type="chamber">
+			<description>You seem to be in a large cavern.
+			There are sounds of water running and dripping.
+			There is a breeze, and you have a sense of depth in the cave.
+			There is a pale light coming from the north.</description>
+			<direction dir="south" dest="E" text="" />
+			<extends dir="north" dest="F-4" text="" />
+			<extends dir="west" dest="F-2" text="" />
+			<light value="10" />
+		</location>
+		<location id='F-2'>
+			<type value="chamber" />
+			<description>You seem to be in a large cavern.
+			The sounds of water seem muted here.</description>
+			<extends dir="east" dest="F-1" text="" />
+			<extends dir="west" dest="F-3" text="" />
+			<light value="10" />
+			<extends dir="northeast" dest="F-4" text="" />
+		</location>
+		<location id='F-3'>
+			<type value="chamber" />
+			<description>You seem to be in a large cavern.
+			You feel a warm breeze to the south.</description>
+			<extends dir="east" dest="F-2" text="" />
+			<direction dir="south" dest="G" text="" />
+			<light value="10" />
+		</location>
+		<location id='F-4'>
+			<type value="chamber" />
+			<description>You seem to be in a large cavern.
+			The sound of running water is getting louder to your north.</description>
+			<extends dir="south" dest="F-1" text="" />
+			<extends dir="north" dest="F-5" text="" />
+			<direction dir="east" dest="M" text="You slide down through a narrow tube, then drop into the next chamber." />
+			<light value="10" />
+			<extends dir="southwest" dest="F-2" text="" />
+		</location>
+		<location id='F-5'>
+			<type value="chamber" />
+			<description>You seem to be in a large cavern.
+			There is a sound of running water to your north.
+			To your west, there is a faint glow.</description>
+			<extends dir="south" dest="F-4" text="" />
+			<extends dir="north" dest="F-6" text="" />
+			<direction dir="west" dest="I-1" text="" />
+			<light value="15" />
+		</location>
+		<location id='F-6'>
+			<type value="chamber" />
+			<description>You seem to be in a large cavern.
+			The sound of running water is becoming more intense.</description>
+			<extends dir="south" dest="F-5" text="" />
+			<extends dir="north" dest="F-7" text="" />
+			<direction dir="west" dest="J" text="" />
+			<light value="10" />
+		</location>
+		<location id='F-7'>
+			<type value="chamber" />
+			<description>You seem to be in a large cavern.
+			You are apparently at the northmost limit of the cavern.
+			There is a waterfall on the north wall.</description>
+			<extends dir="south" dest="F-6" text="" />
+			<direction dir="west" dest="K" text="" />
+			<light value="10" />
+			<water value="true" />
+		</location>
+		<location id='G'>
+			<type value="chamber" />
+			<description>You are in a tight, damp chamber, with many insects crawling about the walls.
+			You can smell decay.</description>
+			<direction dir="north" dest="F-3" text="" />
+			<direction dir="west" dest="H" text="" />
+			<light value="5" />
+		</location>
+		<location id='H'>
+			<type value="chamber" />
+			<description>You are in a larger chamber. It is very warm in here.
+			It is also very dark, but you feel a distinctly warm breeze to the south.</description>
+			<direction dir="east" dest="G" text="" />
+			<direction dir="south" dest="Intro" text="You slide down a slippery tube, then out into the sunshine." />
+			<light value="2" />
+		</location>
+		<location id='I-1'>
+			<type value="chamber" />
+			<description>You are in a medium sized chamber.
+			A soft glow emanates from the north and west.</description>
+			<direction dir="east" dest="F-5" text="" />
+			<extends dir="west" dest="I-2" text="" />
+			<light value="20" />
+		</location>
+		<location id='I-2'>
+			<type value="chamber" />
+			<description>You are in a medium sized chamber.
+			A soft glow emanates from a room to the north.</description>
+			<extends dir="east" dest="I-1" text="" />
+			<direction dir="north" dest="L" text="" />
+			<light value="25" />
+		</location>
+		<location id='J'>
+			<type value="chamber" />
+			<description>You are in a small side-chamber, more of an alcove than a room.</description>
+			<direction dir="east" dest="F-6" text="" />
+			<light value="5" />
+		</location>
+		<location id='K'>
+			<type value="chamber" />
+			<description>You are in a small side-chamber, more of an alcove than a room.</description>
+			<direction dir="east" dest="F-7" text="" />
+			<light value="5" />
+		</location>
+		<location id='L'>
+			<type value="chamber" />
+			<description>You are in a medium sized chamber. The chamber is filled gold objects.</description>
+			<direction dir="south" dest="I-2" text="" />
+			<light value="40" />
+			<doorway dir="west" dest="Q" text="" key="24" status="locked" id="24" />
+		</location>
+		<location id='M'>
+			<!-- You cannot get from this chamber to the main 'F' chamber.
+			See the 'e' tag for F-4 -->
+			<type value="chamber" />
+			<description>You are in a narrow corridor.</description>
+			<accident type="fall" roll="5" effect="str-1" dir="east" text="You fell hard coming out of that tube!" />
+			<extends dir="east" dest="N-3" text="" />
+		</location>
+		<location id='N-1'>
+			<type value="chamber" />
+			<description>You are in a large gallery.</description>
+			<extends dir="north" dest="N-2" text="" />
+			<extends dir="east" dest="N-5" text="" />
+			<extends dir="northeast" dest="N-6" text="" />
+		</location>
+		<location id='N-2'>
+			<type value="chamber" />
+			<description>You are in a large gallery.</description>
+			<extends dir="north" dest="N-3" text="" />
+			<extends dir="east" dest="N-6" text="" />
+			<extends dir="south" dest="N-1" text="" />
+			<extends dir="northeast" dest="N-7" text="" />
+			<extends dir="southeast" dest="N-5" text="" />
+		</location>
+		<location id='N-3'>
+			<type value="chamber" />
+			<description>You are in a large gallery.</description>
+			<extends dir="north" dest="N-4" text="" />
+			<extends dir="east" dest="N-7" text="" />
+			<extends dir="south" dest="N-2" text="" />
+			<extends dir="west" dest="M" text="" />
+			<extends dir="northeast" dest="N-8" text="" />
+			<extends dir="southeast" dest="N-6" text="" />
+		</location>
+		<location id='N-4'>
+			<type value="chamber" />
+			<description>You are in a large gallery.</description>
+			<extends dir="east" dest="N-8" text="" />
+			<extends dir="south" dest="N-3" text="" />
+			<extends dir="southeast" dest="N-7" text="" />
+		</location>
+		<location id='N-5'>
+			<type value="chamber" />
+			<description>You are in a large gallery.</description>
+			<extends dir="north" dest="N-6" text="" />
+			<extends dir="east" dest="N-9" text="" />
+			<extends dir="west" dest="N-1" text="" />
+			<extends dir="northwest" dest="N-2" text="" />
+			<extends dir="northeast" dest="N-A" text="" />
+		</location>
+		<location id='N-6'>
+			<type value="chamber" />
+			<description>You are in a large gallery.</description>
+			<extends dir="north" dest="N-7" text="" />
+			<extends dir="east" dest="N-A" text="" />
+			<extends dir="west" dest="N-2" text="" />
+			<extends dir="south" dest="N-5" text="" />
+			<extends dir="northeast" dest="N-B" text="" />
+			<extends dir="southeast" dest="N-9" text="" />
+			<extends dir="southwest" dest="N-1" text="" />
+			<extends dir="northwest" dest="N-3" text="" />
+		</location>
+		<location id='N-7'>
+			<type value="chamber" />
+			<description>You are in a large gallery.</description>
+			<extends dir="north" dest="N-8" text="" />
+			<extends dir="east" dest="N-B" text="" />
+			<extends dir="west" dest="N-3" text="" />
+			<extends dir="south" dest="N-6" text="" />
+			<extends dir="northeast" dest="N-C" text="" />
+			<extends dir="southeast" dest="N-A" text="" />
+			<extends dir="southwest" dest="N-2" text="" />
+			<extends dir="northwest" dest="N-4" text="" />
+		</location>
+		<location id='N-8'>
+			<type value="chamber" />
+			<description>You are in a large gallery.</description>
+			<extends dir="east" dest="N-C" text="" />
+			<extends dir="west" dest="N-4" text="" />
+			<extends dir="south" dest="N-7" text="" />
+			<extends dir="southeast" dest="N-B" text="" />
+			<extends dir="southwest" dest="N-3" text="" />
+		</location>
+		<location id='N-9'>
+			<type value="chamber" />
+			<description>You are in a large gallery.</description>
+			<extends dir="north" dest="N-A" text="" />
+			<extends dir="east" dest="N-D" text="" />
+			<extends dir="west" dest="N-5" text="" />
+			<extends dir="northeast" dest="N-E" text="" />
+			<extends dir="northwest" dest="N-6" text="" />
+		</location>
+		<location id='N-A'>
+			<type value="chamber" />
+			<description>You are in a large gallery.</description>
+			<extends dir="north" dest="N-B" text="" />
+			<extends dir="east" dest="N-E" text="" />
+			<extends dir="west" dest="N-6" text="" />
+			<extends dir="south" dest="N-9" text="" />
+			<extends dir="northeast" dest="N-F" text="" />
+			<extends dir="southeast" dest="N-D" text="" />
+			<extends dir="southwest" dest="N-5" text="" />
+			<extends dir="northwest" dest="N-7" text="" />
+			<direction dir="down" dest="O-1" text="You slip through a hole in the floor down to a cavern below." />
+		</location>
+		<location id='N-B'>
+			<type value="chamber" />
+			<description>You are in a large gallery.</description>
+			<extends dir="north" dest="N-C" text="" />
+			<extends dir="east" dest="N-F" text="" />
+			<extends dir="west" dest="N-7" text="" />
+			<extends dir="south" dest="N-A" text="" />
+			<extends dir="northeast" dest="N-G" text="" />
+			<extends dir="southeast" dest="N-E" text="" />
+			<extends dir="southwest" dest="N-6" text="" />
+			<extends dir="northwest" dest="N-8" text="" />
+		</location>
+		<location id='N-C'>
+			<type value="chamber" />
+			<description>You are in a large gallery.
+			A breeze comes through a hole in the ceiling.
+			</description><extends dir="east" dest="N-G" text="" />
+			<extends dir="west" dest="N-8" text="" />
+			<extends dir="south" dest="N-B" text="" />
+			<extends dir="southeast" dest="N-F" text="" />
+			<extends dir="southwest" dest="N-7" text="" />
+		</location>
+		<location id='N-D'>
+			<type value="chamber" />
+			<description>You are in a large gallery.</description>
+			<extends dir="north" dest="N-E" text="" />
+			<extends dir="west" dest="N-9" text="" />
+			<extends dir="northwest" dest="N-A" text="" />
+		</location>
+		<location id='N-E'>
+			<type value="chamber" />
+			<description>You are in a large gallery.</description>
+			<extends dir="north" dest="N-F" text="" />
+			<extends dir="west" dest="N-A" text="" />
+			<extends dir="south" dest="N-D" text="" />
+			<extends dir="southwest" dest="N-9" text="" />
+			<extends dir="northwest" dest="N-B" text="" />
+		</location>
+		<location id='N-F'>
+			<type value="chamber" />
+			<description>You are in a large gallery.</description>
+			<extends dir="north" dest="N-G" text="" />
+			<extends dir="west" dest="N-B" text="" />
+			<extends dir="south" dest="N-E" text="" />
+			<extends dir="southwest" dest="N-A" text="" />
+			<extends dir="northwest" dest="N-C" text="" />
+		</location>
+		<location id='N-G'>
+			<type value="chamber" />
+			<description>You are in a large gallery.</description>
+			<extends dir="west" dest="N-C" text="" />
+			<extends dir="south" dest="N-F" text="" />
+			<extends dir="southwest" dest="N-B" text="" />
+		</location>
+		<location id='O-1'>
+			<type value="chamber" />
+			<description>You are in a large underground cavern.
+			There is an exit in the ceiling to the gallery above,
+			but there does not seem to be a way to get back up there.</description>
+			<extends dir="north" dest="O-2" text="" />
+		</location>
+		<location id='O-2'>
+			<type value="chamber" />
+			<description>You are in a large underground cavern.</description>
+			<extends dir="north" dest="O-3" text="" />
+			<extends dir="south" dest="O-1" text="" />
+			<direction dir="east" dest="RA" text="" />
+		</location>
+		<location id='O-3'>
+			<type value="chamber" />
+			<description>You are in a large underground cavern.</description>
+			<extends dir="north" dest="O-4" text="" />
+			<extends dir="south" dest="O-2" text="" />
+			<direction dir="west" dest="RB" text="" />
+		</location>
+		<location id='O-4'>
+			<type value="chamber" />
+			<description>You are in a large underground cavern.</description>
+			<extends dir="north" dest="O-5" text="" />
+			<extends dir="south" dest="O-3" text="" />
+			<direction dir="east" dest="RC-1" text="" />
+		</location>
+		<location id='O-5'>
+			<type value="chamber" />
+			<description>You are in a large underground cavern.</description>
+			<extends dir="north" dest="O-6" text="" />
+			<extends dir="south" dest="O-4" text="" />
+			<direction dir="west" dest="RG" text="" />
+		</location>
+		<location id='O-6'>
+			<type value="chamber" />
+			<description>You are in a large underground cavern.</description>
+			<extends dir="north" dest="O-7" text="" />
+			<extends dir="south" dest="O-5" text="" />
+			<direction dir="east" dest="RH" text="" />
+		</location>
+		<location id='O-7'>
+			<type value="chamber" />
+			<description>You are in a large underground cavern.</description>
+			<extends dir="west" dest="O-8" text="" />
+			<extends dir="south" dest="O-6" text="" />
+		</location>
+		<location id='O-8'>
+			<type value="chamber" />
+			<description>You are in a large underground cavern.</description>
+			<extends dir="west" dest="O-9" text="" />
+			<extends dir="east" dest="O-7" text="" />
+		</location>
+		<location id='O-9'>
+			<type value="chamber" />
+			<description>You are in a large underground cavern.</description>
+			<extends dir="west" dest="O-A" text="" />
+			<extends dir="east" dest="O-8" text="" />
+			<direction dir="north" dest="RI" text="" />
+		</location>
+		<location id='O-A'>
+			<type value="chamber" />
+			<description>You are in a large underground cavern.</description>
+			<extends dir="west" dest="O-B" text="" />
+			<extends dir="east" dest="O-9" text="" />
+		</location>
+		<location id='O-B'>
+			<type value="chamber" />
+			<description>You are in a large underground cavern.</description>
+			<direction dir="west" dest="P" text="" />
+			<extends dir="east" dest="O-A" text="" />
+		</location>
+		<location id='P'>
+			<type value="chamber" />
+			<description>A small room containing nothing but a set of stairs that wind up into the dark.</description>
+			<direction dir="east" dest="O-B" text="" />
+			<direction dir="up" dest="Q" text="You ascend the stairs." />
+		</location>
+		<location id='Q'>
+			<type value="chamber" />
+			<description>A small room containing nothing but a set of stairs that wind down into the dark.
+			Light comes from the room to the east.</description>
+			<direction dir="down" dest="P" text="You descend the stairs." />
+			<doorway dir="east" dest="L" text="" key="24" status="locked" id="24" />
+		</location>
+		<location id='RA'>
+			<type value="chamber" />
+			<description>You are in a cell to the east side of the underground cavern.</description>
+			<direction dir="west" dest="O-2" text="" />
+		</location>
+		<location id='RB'>
+			<type value="chamber" />
+			<description>You are in a cell to the west side of the underground cavern.</description>
+			<direction dir="east" dest="O-3" text="" />
+		</location>
+		<location id='RC-1'>
+			<type value="chamber" />
+			<description>You are in a small gallery to the east of the main cavern.
+			There are lit torches on the walls, making the gallery well-lit.</description>
+			<light value="60" />
+			<direction dir="west" dest="O-4" text="" />
+			<extends dir="east" dest="RC-2" text="" />
+		</location>
+		<location id='RC-2'>
+			<type value="chamber" />
+			<description>You are in a small gallery to the east of the main cavern.
+			There are lit torches on the walls, making the gallery well-lit.
+			There seem to be small chambers off to the north, east and south.</description>
+			<light value="60" />
+			<extends dir="west" dest="RC-1" text="" />
+			<direction dir="north" dest="RF" text="" />
+			<direction dir="east" dest="RD" text="" />
+			<direction dir="south" dest="RE" text="" />
+		</location>
+		<location id='RD'>
+			<type value="chamber" />
+			<description>A small chamber to the east of the gallery.
+			It appears to be empty.</description>
+			<direction dir="west" dest="RC-2" text="" />
+		</location>
+		<location id='RE'>
+			<type value="chamber" />
+			<description>A small chamber to the south of the gallery.
+			It appears to be empty.</description>
+			<direction dir="north" dest="RC-2" text="" />
+		</location>
+		<location id='RF'>
+			<type value="chamber" />
+			<description>A small chamber to the north of the gallery.
+			It appears to be empty.
+			A breeze seems to come from the northeast corner of the chamber.</description>
+			<direction dir="south" dest="RC-2" text="" />
+			<direction dir="northeast" dest="RJ" text="" />
+		</location>
+		<location id='RG'>
+			<type value="chamber" />
+			<description>A shallow alcove with a secret.
+			There is light coming from the floor in the back of the alcove.</description>
+			<direction dir="east" dest="O-5" text="" />
+			<direction dir="down" dest="AW4" text="You climb down a deep tube with shallow hand and footholds." 
+				file="wellofsouls.xml"/>
+		</location>
+		<location id='RH'>
+			<type value="chamber" />
+			<description>An alcove with a greek statue.</description>
+			<direction dir="west" dest="O-6" text="" />
+		</location>
+		<location id='RI'>
+			<type value="chamber" />
+			<description>An alcove with an egyptian statue.</description>
+			<direction dir="south" dest="O-9" text="" />
+		</location>
+		<location id='RJ'>
+			<type value="chamber" />
+			<description>A very tight, dark chamber.
+			A breeze seems to come from the northeast corner of the chamber.</description>
+			<direction dir="southwest" dest="RF" text="" />
+			<direction dir="northeast" dest="RK" text="" />
+		</location>
+		<location id='RK'>
+			<!-- From here to RQ you are going slightly up -->
+			<type value="chamber" />
+			<description>A small, circular chamber.
+			A narrow hole in the ceiling seems to extend to rooms above.
+			The hole is much too small to fit through, even if you could reach it.</description>
+			<light value="10" />
+			<direction dir="southwest" dest="RJ" text="" />
+			<direction dir="northwest" dest="RL" text="You notice a slight upward slope going into the next chamber" />
+		</location>
+		<location id='RL'>
+			<type value="chamber" />
+			<description>A very tight, dark chamber.
+			A breeze seems to come from the southeast corner of the chamber.</description>
+			<direction dir="southeast" dest="RK" text="You notice a slight downward slope going into the next chamber." />
+			<direction dir="northeast" dest="RM" text="You notice a slight upward slope going into the next chamber." />
+		</location>
+		<location id='RM'>
+			<type value="chamber" />
+			<description>A very tight, dark chamber.
+			Are you lost yet?</description>
+			<direction dir="southwest" dest="RL" text="You notice a slight downward slope going into the next chamber." />
+			<direction dir="northwest" dest="RN" text="You notice a slight upward slope going into the next chamber." />
+		</location>
+		<location id='RN'>
+			<type value="chamber" />
+			<description>A very small, dark chamber.
+			You hear water dripping to the southwest.</description>
+			<direction dir="southwest" dest="RP" text="You notice a slight downward slope going into the next chamber." />
+			<direction dir="southeast" dest="RM" text="You notice a slight upward slope going into the next chamber." />
+		</location>
+		<location id='RP'>
+			<type value="chamber" />
+			<description>A very small, dark chamber.
+			You hear water dripping to the southwest.</description>
+			<direction dir="northeast" dest="RN" text="You notice a slight downward slope going into the next chamber." />
+			<direction dir="southwest" dest="RQ" text="You notice a slight upward slope going into the next chamber." />
+		</location>
+		<location id='RQ'>
+			<!-- Going from RQ to RK, you are going steadily down. -->
+			<type value="chamber" />
+			<description>This room is barely large enough for you.
+			In the middle of the floor, a dim light seems to filter up from below.</description>
+			<direction dir="northeast" dest="RP" text="You notice a slight downward slope going into the next chamber." />
+			<direction dir="down" dest="N-C" text="You fall through a hole in the chamber into a large gallery." />
+		</location>
+	</locations>
+</game>
