@@ -197,6 +197,16 @@ module Adventure
 			to_container.add( gobject )
 		end
 		
+		def pretty( level = 0 )
+			indent = ( "  " * level )
+			indent2 = ( "  " *  ( level + 1 ) )
+			result = indent + "#<Adventure::Container:" + @name 
+			result += "\n" + indent2 + "@description:" + @description
+			result += "\n" + @contents.pretty(level+1)
+			result += "\n" + indent + ">"
+			return result
+		end
+		
 	end # Container class
 	
 end # Adventure module

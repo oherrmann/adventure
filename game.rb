@@ -2,12 +2,13 @@
 # 
 # This is the Ruby Caves Adventure Game. 
 # This version uses XML game description files.
-require 'ditxml'
-require 'game_grammar'
-require 'gameobjects'
-require 'gameplayer'
-require 'gutils'
-require 'gamemonster'
+require './ditxml'
+require './game_grammar'
+require './gameobjects'
+require './gameplayer'
+require './gutils'
+require './gamemonster'
+require './gtime'
 # This line required for jruby, apparently
 require 'date'
 
@@ -381,6 +382,8 @@ module Adventure
 		# The take command attempts to pick up objects in a room.
 		def take_item( text )
 			objects = @object_file[ @gamefile + "/" + @location ]
+			#peval {"objects.pretty;text.pretty;@location.pretty"}
+			# TODO: Convert 'text' parameter to gobject, for removal from room inventory.
 			@object_file[ @gamefile + "/" + @location ].take_from( gobject, @players[0].inventory )
 		end
 		

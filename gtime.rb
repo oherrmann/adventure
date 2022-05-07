@@ -169,3 +169,14 @@ class Numeric
 		return result
 	end
 end # Numeric class
+
+class Date
+  SECONDS_IN_DAY = 86400
+  def self.day_fraction_to_time(fr)
+    ss,  fr = fr.divmod(86_400) # 4p
+    h,   ss = ss.divmod(3600)
+    min, s  = ss.divmod(60)
+    return h, min, s, fr
+  end
+end
+
