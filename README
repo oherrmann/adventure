@@ -1,7 +1,15 @@
 # README file
-
+# 
 # Text-based adventure game written in Ruby.
 # Originally written 2009.
 # All (c)2011 KittySoft Solutions, by Gwen Herrmann (formerly Owein)
-
+# 
+# place all files in one directory
+#
+# set your current directory to whatever directory you place the files.
+# 
+# type 
+# play
+# at the command prompt
+# 
 # <more details to follow>
