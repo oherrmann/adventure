@@ -2,9 +2,9 @@
 # 
 # Ruby Cave Game objects
 # 
-# This file is for code that maipulates objects
+# This file is for code that manipulates objects
 # 
-#
+# pretty
 
 
 
@@ -74,6 +74,15 @@ module Adventure
 			@attributes[ key ] = value
 		end
 		
+		def unset_attr( key )
+			@attributes.delete( key )
+		end
+		
+		
+		def to_s()
+			return @name
+		end
+		
 	end # GObject class
 	
 	class Container < GObject
@@ -138,7 +147,7 @@ module Adventure
 		# Returns the objects in the inventory that match the specification. The specification
 		# is the same as for the contains? method: the first argument is the name, which must
 		# match, and the second is a hash of attributes, which must match if the attribute has
-		# a value, or must just exist of the attribute is nil. The method returns an array of
+		# a value, or must just exist if the attribute is nil. The method returns an array of
 		# the objects that match if there is more than one, or just the object if there is only
 		# one. Use contains? first to make sure only 1 object matches. 
 		def match( gname, attr={} )
@@ -193,8 +202,17 @@ module Adventure
 		# or removing it from a character inventory and placing it in a room inventory. The
 		# 'from' inventory is _self_, and the 'to' inventory is specified as an argument. 
 		def take_from( gobject, to_container )
-			self.drop( gobject )
-			to_container.add( gobject )
+			if self.contains?( gobject ) == 1
+				obj = self.match( gobject )
+				self.drop( obj )
+				to_container.add( obj )
+				Adventure::Game.inform( "A " + obj.name + " has been taken from " + self.name )
+				Adventure::Game.inform (" and added to " + to_container.name + ".")
+			elsif self.contains?( gobject ) > 1
+				Adventure::Game.inform( "There is more than one item that matches your request." )
+			else
+				Adventure::Game.inform( "There are no items that match your request." )
+			end
 		end
 		
 		def pretty( level = 0 )

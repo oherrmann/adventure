@@ -31,7 +31,7 @@ module Adventure
 			@read_description = false
 			@identity = identity
 			@found = false
-			@path = []
+			#@path = []
 			@text = []
 			@vars = {}
 			@doors = {}
@@ -40,9 +40,10 @@ module Adventure
 		# This is a predefined method in StreamListener. It is called when an
 		# opening tag is encountered, for example; <location>
 		def tag_start( name, attrs )
-			@path.push( name )
+			#@path.push( name )
 			# the <location> tags should always be at the same depth, so we might 
 			# be able to speed this up by checking @path.size.
+			# Note: @path is not really needed and so is being removed. 
 			if name == "location" && attrs["id"] == @identity
 				@reading = true
 				@found = true
@@ -87,8 +88,9 @@ module Adventure
 			end
 		end
 		
+		# Called when an ending-tag is encountered, eg: </location>
 		def tag_end( name )
-			@path.pop
+			#@path.pop
 			if @reading && name == "location" 
 				@reading = false
 			elsif @reading && name == "description"

@@ -42,7 +42,7 @@ module Adventure
 			@last_location = ""
 			@last_text = []
 			@last_vars = {}
-			@messages = []
+			@@messages = []
 			@players = []
 			@room_path = []
 			@object_file = {}
@@ -94,10 +94,10 @@ module Adventure
 		end
 		
 		def game_intro( room = "Intro" )
-			inform( "Welcome to Ruby Caves Adventure Game." )
-			inform( "Version " + $version )
+			Game.inform( "Welcome to Ruby Caves Adventure Game." )
+			Game.inform( "Version " + $version )
 			loc = IntroductionListener.new
-			inform( loc.do( @gamefile ) ) if room == "Intro"
+			Game.inform( loc.do( @gamefile ) ) if room == "Intro"
 		end
 		
 		# Saves the room data in memory.
@@ -214,7 +214,7 @@ module Adventure
 			@rooms = {}
 			@last_text = []
 			@last_vars = {}
-			@messages = []
+			@@messages = []
 			@last_location = ""
 			set_location( room )
 			@input_log = []
@@ -225,21 +225,21 @@ module Adventure
 				interpret( input )
 				other_turns()
 			end
-			update() if @messages.size > 0
+			update() if @@messages.size > 0
 			log( Adventure::ts(@config["date.format"]) + " - Game ended." )
 		end
 		
 		# Displays info to the user terminal.
-		def inform( text = "" )
+		def Game.inform( text = "" )
 			if text.class == Array
-				@messages += text
+				@@messages += text
 			elsif text.class == String
-				@messages << text
+				@@messages << text
 			end
 		end
 		
 		def clear_messages
-			@messages = []
+			@@messages = []
 		end
 		
 		# The log method writes user input and game messages to a log file. 
@@ -269,29 +269,29 @@ module Adventure
 			end
 			@players[0].in_room( @location )
 			if @mode == 1
-				inform( "You are in room " + @location )
-				inform( @last_text )
+				Game.inform( "You are in room " + @location )
+				Game.inform( @last_text )
 			else
 				if ! been_to
-					inform( @last_text )
+					Game.inform( @last_text )
 				elsif @last_location != @location
-					inform( @last_text[0] )
+					Game.inform( @last_text[0] )
 				end
 			end
 			@players[0].last_location = @players[0].location
 			check_for_accident() if ( @last_location != @location )
 			if @players[0].alive? == false
-				inform( "You have died.")
+				Game.inform( "You have died.")
 			end
 			if @playing == false
-				inform( "Game is over. Goodbye." )
+				Game.inform( "Game is over. Goodbye." )
 			end
 			if @last_command == "inspect" || @last_command == "check"
-				puts @messages
-				log( @messages )
+				puts @@messages
+				log( @@messages )
 			else
-				puts @messages.wrap(70)
-				log( @messages.wrap(70) )
+				puts @@messages.wrap(70)
+				log( @@messages.wrap(70) )
 			end
 			@last_location = @location
 			clear_messages
@@ -361,9 +361,10 @@ module Adventure
 					when "drop" then drop_item( value )
 					when "consume" then consume( value )
 					when "goto" then goto_room( @original.split(" ")[1..-1] )
+					when "pinfo" then programmer_info( value )
 					when "reload" then reload_room( @original.split(" ")[1..-1] )
 					else
-						inform( "I do not understand what you mean." )
+						Game.inform( "I do not understand what you mean." )
 				end
 			end
 		end
@@ -376,15 +377,20 @@ module Adventure
 		end
 		
 		def where_am_i( text )
-			inform( @last_text )
+			Game.inform( @last_text )
+		end
+		
+		def programmer_info( text )
+			Game.inform( "location = " + @gamefile + "/" + @location + "\n")
+			Game.inform( "time = " + @timer.to_s )
 		end
 		
 		# The take command attempts to pick up objects in a room.
 		def take_item( text )
 			objects = @object_file[ @gamefile + "/" + @location ]
-			#peval {"objects.pretty;text.pretty;@location.pretty"}
-			# TODO: Convert 'text' parameter to gobject, for removal from room inventory.
-			@object_file[ @gamefile + "/" + @location ].take_from( gobject, @players[0].inventory )
+			#objects.each do |x| puts x.to_s end
+			#puts objects.all_items
+			@object_file[ @gamefile + "/" + @location ].take_from( text[0], @players[0].inventory )
 		end
 		
 		# The drop command attempts to discard objects in a room.
@@ -406,15 +412,15 @@ module Adventure
 				door = @last_vars[ direction ][LOC_DOOR]
 				key = @players[0].inventory.contains?("key",{"key"=>door_key( door )})
 				if door_locked?( door ) && key < 1
-					inform( "The door is locked." )
+					Game.inform( "The door is locked." )
 					direction = "locked" # Setting the direction to 'locked' disables the move.
 					@timer += 2.mins
 				elsif door_locked?( door ) && key > 0
 					door_unlock( door, door_key( door ) )
-					inform( "The door is locked but you have the key, and unlock it.")
+					Game.inform( "The door is locked but you have the key, and unlock it.")
 					@timer += 1.mins
 				elsif door_unlocked?( door )
-					inform( "The door is unlocked so you are able to pass through." )
+					Game.inform( "The door is unlocked so you are able to pass through." )
 					@timer += 30.secs
 				end
 			end
@@ -427,7 +433,7 @@ module Adventure
 						set_gamefile( loc[LOC_FILE] )
 					end
 					set_location( loc[LOC_DEST] )
-					inform( loc[LOC_TEXT] ) if loc[LOC_TEXT]
+					Game.inform( loc[LOC_TEXT] ) if loc[LOC_TEXT]
 					@players[0].go( text[0], back )
 					@players[0].adjust( loc[LOC_EFFECT] ) if loc[LOC_TYPE] == GO_DROPOFF
 					#@playing = false if @players[0].alive? == false
@@ -437,11 +443,11 @@ module Adventure
 						@timer += 1.mins
 					end
 				else
-					inform( "You cannot go that way.")
+					Game.inform( "You cannot go that way.")
 					@timer += 1.mins
 				end
 			else
-				inform("I do not understand what you mean." )
+				Game.inform("I do not understand what you mean." )
 			end
 			@players[0].adjust( "ene-0.5" )
 		end
@@ -458,8 +464,8 @@ module Adventure
 			end
 			if accident.size > 0
 				# The accident has occurred! 
-				inform( "Warning: an accident has occured: " + accident[ACC_TYPE] )
-				inform( accident[ACC_TEXT] )
+				Game.inform( "Warning: an accident has occured: " + accident[ACC_TYPE] )
+				Game.inform( accident[ACC_TEXT] )
 				@players[0].adjust( accident[ACC_EFFECT] )
 				#@playing = false if @players[0].alive? == false
 			end
@@ -487,9 +493,9 @@ module Adventure
 				roomss = rooms.size
 				if roomss > 0 then rooms = Adventure::list_to_english( rooms ) end
 				if roomss == 1
-					inform( "There is a room to the " + rooms + "." )
+					Game.inform( "There is a room to the " + rooms + "." )
 				elsif roomss > 1 
-					inform( "There are rooms to the " + rooms + "." )
+					Game.inform( "There are rooms to the " + rooms + "." )
 				end
 				# Check for extended room ( extends tag )
 				rooms = []
@@ -500,10 +506,10 @@ module Adventure
 				end
 				roomss = rooms.size
 				if roomss == 8
-					inform( "The room extends in all directions." )
+					Game.inform( "The room extends in all directions." )
 				elsif roomss > 0 
 					rooms = Adventure::list_to_english( rooms )
-					inform( "The room extends to the " + rooms + "." )
+					Game.inform( "The room extends to the " + rooms + "." )
 				end
 				# Check for doors ( doorway tags )
 				rooms = []
@@ -515,9 +521,9 @@ module Adventure
 				roomss = rooms.size
 				if roomss > 0 then rooms = Adventure::list_to_english( rooms ) end
 				if roomss == 1
-					inform( "There is a door to the " + rooms + "." )
+					Game.inform( "There is a door to the " + rooms + "." )
 				elsif roomss > 1 
-					inform( "There are doors to the " + rooms + "." )
+					Game.inform( "There are doors to the " + rooms + "." )
 				end
 				#Check for dropoffs ( dropoff tag )
 				rooms = []
@@ -529,16 +535,16 @@ module Adventure
 				roomss = rooms.size
 				if roomss > 0 then rooms = Adventure::list_to_english( rooms ) end
 				if roomss == 1
-					inform( "There is a dropoff to the " + rooms + "." )
+					Game.inform( "There is a dropoff to the " + rooms + "." )
 				elsif roomss > 1 
-					inform( "There are dropoffs to the " + rooms + "." )
+					Game.inform( "There are dropoffs to the " + rooms + "." )
 				end
 				# check for objects
 				if object_file( @location ).items > 0
-					inform( "The following objects can be seen: " + list_objects( object_file( @location ) ) )
+					Game.inform( "The following objects can be seen: " + list_objects( object_file( @location ) ) )
 				end
 			else
-			 inform( look( value )[1] )
+			 Game.inform( look( value )[1] )
 			end
 		end
 		
@@ -609,17 +615,19 @@ module Adventure
 			end
 			case text[0]
 				when "room"
-					inform( "The name of this room is #{@location}." )
+					Game.inform( "The name of this room is #{@location}." )
 				when "rooms"
-					inform( "Rooms visited:" )
-					inform( @room_path.map { |e| e+", "} )
+					Game.inform( "Rooms visited:" )
+					Game.inform( @room_path.map { |e| e+", "} )
 				when "status"
-					inform( @players[0].status )
+					Game.inform( @players[0].status )
 				when "path"
-					inform( @players[0].path.path().join(", ") )
-					inform( "pointer=" + @players[0].path.pointer().to_s )
+					Game.inform( @players[0].path.path().join(", ") )
+					Game.inform( "pointer=" + @players[0].path.pointer().to_s )
 				when "objects"
-					inform( @object_file.inspect )
+					Game.inform( @object_file.inspect )
+				when "inventory"
+					Game.inform("You're inventory includes " + @players[0].inventory.all_items().join(", ") )
 				when "timer"
 					timer,res = @timer.dhms, []
 					if timer[0] == 1 then res << "1 day" end
@@ -629,9 +637,9 @@ module Adventure
 					if timer[2] == 1 then res << "1 minute" end
 					if timer[2] > 1 then res << "%d minutes" % timer[2] end
 					if res.size == 0 then res << "0 minutes" end
-					inform( "Game time = #{res.join(", ")}." )
+					Game.inform( "Game time = #{res.join(", ")}." )
 				else
-					inform( "I do not understand what you mean." )
+					Game.inform( "I do not understand what you mean." )
 			end
 			@timer += 5.secs
 		end
@@ -641,14 +649,14 @@ module Adventure
 		def consume( text )
 			if text.member?( "water" )
 				@players[0].adjust( "ene+20;str+1" )
-				inform( "Ahhhh! The pause that refreshes. ")
+				Game.inform( "Ahhhh! The pause that refreshes. ")
 				e = @players[0].energy()
-				inform( "You're current energy level is " + e.to_s )
+				Game.inform( "You're current energy level is " + e.to_s )
 			elsif text.member?( "food" )
 				@players[0].adjust( "ene+50;str+2" )
-				inform( "Very tasty! ")
+				Game.inform( "Very tasty! ")
 				e = @players[0].energy()
-				inform( "You're current energy level is " + e.to_s )
+				Game.inform( "You're current energy level is " + e.to_s )
 			end
 		end
 		
@@ -659,12 +667,12 @@ module Adventure
 			text = text.join(" ")
 			if @config["command.inspect"] == "yes"
 				begin
-					inform( reval{text} )
+					Game.inform( reval{text} )
 				rescue Exception => e
-					inform( "Inspect Fail!: " + e )
+					Game.inform( "Inspect Fail!: " + e )
 				end
 			else
-				inform( "I do not understand." )
+				Game.inform( "I do not understand." )
 			end
 		end
 		
@@ -683,10 +691,10 @@ module Adventure
 				if upload_room( room )
 					set_location( room )
 				else
-					inform( "That room cannot be found." )
+					Game.inform( "That room cannot be found." )
 				end
 			else
-				inform( "I cannot execute that command in player mode." )
+				Game.inform( "I cannot execute that command in player mode." )
   		end
 		end
 		
@@ -694,9 +702,9 @@ module Adventure
 		def reload_room( text )
 			if text[0]
 				if upload_room( text[0] )
-					inform( "Room #{text[0]} has been re-loaded." )
+					Game.inform( "Room #{text[0]} has been re-loaded." )
 				else
-					inform( "Room #{text[0]} could not be found in #{@gamefile}." )
+					Game.inform( "Room #{text[0]} could not be found in #{@gamefile}." )
 				end
 			end
 		end

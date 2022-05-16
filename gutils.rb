@@ -236,6 +236,10 @@ class GTime
 		return self.to_i <=> other.to_i
 	end
 	
+	def to_s()
+		return @time.to_s
+	end
+	
 end # GTime class
 
 class Numeric
