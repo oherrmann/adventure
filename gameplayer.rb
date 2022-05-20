@@ -48,6 +48,7 @@ module Adventure
 		attr_accessor :name, :inventory, :status, :location, :last_location, :last_direction, :rooms, :path
 		
 		def take( object )
+			object.seen = true
 			@inventory.add( object )
 		end
 		
@@ -249,6 +250,11 @@ module Adventure
 			end
 			@path = result
 			@ptr = @path.size
+		end
+		
+		def clear()
+			@path = []
+			@ptr = 0
 		end
 		
 	end # Gpath class

@@ -49,6 +49,7 @@ module Adventure
 		end
 		
 		attr_reader :name, :description
+		attr_accessor :seen, :hidden
 		
 		def is_gobject?
 			return true
@@ -76,8 +77,7 @@ module Adventure
 		
 		def unset_attr( key )
 			@attributes.delete( key )
-		end
-		
+		end		
 		
 		def to_s()
 			return @name
@@ -120,24 +120,26 @@ module Adventure
 		# Checks to see if the inventory contains an object. It does so by the name of the 
 		# object. If the second argument is specified, it looks for a match in the object's
 		# attributes. To just see if the object HAS the attribute, send the attribute in 
-		# with a value of nil.
+		# with a value of nil. Unseen objects are not included in results.
 		def contains?( gname, attr={} )
 			result = 0
 			each do |gobject|
-				if gobject.name == gname
-					if attr.size > 0
-						attrs = attr.size
-						attrr = 0
-						attr.each_pair do |key,value|
-							if value == nil
-								attrr += 1 if gobject.has_attr?( key )
-							else
-								attrr += 1 if gobject.get_attr( key ) == value
+				if gobject.seen == true 
+					if gobject.name == gname 
+						if attr.size > 0
+							attrs = attr.size
+							attrr = 0
+							attr.each_pair do |key,value|
+								if value == nil
+									attrr += 1 if gobject.has_attr?( key )
+								else
+									attrr += 1 if gobject.get_attr( key ) == value
+								end
 							end
+							result += 1 if attrs == attrr
+						else
+							result += 1
 						end
-						result += 1 if attrs == attrr
-					else
-						result += 1
 					end
 				end
 			end
@@ -149,24 +151,27 @@ module Adventure
 		# match, and the second is a hash of attributes, which must match if the attribute has
 		# a value, or must just exist if the attribute is nil. The method returns an array of
 		# the objects that match if there is more than one, or just the object if there is only
-		# one. Use contains? first to make sure only 1 object matches. 
-		def match( gname, attr={} )
+		# one. Use contains? first to make sure only 1 object matches. Hidden objects are not 
+		# included in the results unless hidden == true.
+		def match( gname, attr={}, hidden = false )
 			result = []
 			each do |gobject|
-				if gobject.name == gname
-					if attr.size > 0
-						attrs = attr.size
-						attrr = 0
-						attr.each_pair do |key,value|
-							if value == nil
-								attrr += 1 if gobject.has_attr?( key )
-							else
-								attrr += 1 if gobject.get_attr( key ) == value
+				if gobject.seen == true
+					if gobject.name == gname
+						if attr.size > 0
+							attrs = attr.size
+							attrr = 0
+							attr.each_pair do |key,value|
+								if value == nil
+									attrr += 1 if gobject.has_attr?( key )
+								else
+									attrr += 1 if gobject.get_attr( key ) == value
+								end
 							end
+							result << gobject if attrs == attrr
+						else
+							result << gobject
 						end
-						result << gobject if attrs == attrr
-					else
-						result << gobject
 					end
 				end
 			end
@@ -180,20 +185,21 @@ module Adventure
 		end
 		
 		# Returns an array of the descriptions of the objects in the container.
-		def all_items
+		def all_items( hidden = false )
 			results = []
 			@contents.each do
 				|item|
-				results << item.description
+				if ( item.hidden == true && hidden == true ) || ( item.hidden == false )
+					results << item.description 
+				end
 			end
 			return results
 		end
 		
 		# Returns each object contained by the Container.
 		def each
-			@contents.each do
-			 |item|
-			 yield item
+			@contents.each do |item|
+				yield item
 			end
 		end
 		
@@ -201,18 +207,28 @@ module Adventure
 		# it is removing an item from a room inventory and placing it in a character inventory,
 		# or removing it from a character inventory and placing it in a room inventory. The
 		# 'from' inventory is _self_, and the 'to' inventory is specified as an argument. 
-		def take_from( gobject, to_container )
-			if self.contains?( gobject ) == 1
-				obj = self.match( gobject )
+		def take_from( text, to_container )
+			if self.contains?( text ) == 1 
+				obj = self.match( text )
 				self.drop( obj )
 				to_container.add( obj )
 				Adventure::Game.inform( "A " + obj.name + " has been taken from " + self.name )
 				Adventure::Game.inform (" and added to " + to_container.name + ".")
-			elsif self.contains?( gobject ) > 1
+			elsif self.contains?( text ) > 1 && $GAME_ADJ.include?('any ')
+				objs = self.match( text )
+				obj = objs[0]
+				self.drop( obj )
+				to_container.add( obj )
+				Adventure::Game.inform( "A " + obj.name + " has been taken from " + self.name )
+				Adventure::Game.inform (" and added to " + to_container.name + ".")
+			elsif self.contains?( text ) > 1
 				Adventure::Game.inform( "There is more than one item that matches your request." )
 			else
 				Adventure::Game.inform( "There are no items that match your request." )
 			end
+		end
+		
+		def take_specific_from( text, to_container )
 		end
 		
 		def pretty( level = 0 )

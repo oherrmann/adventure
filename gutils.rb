@@ -84,6 +84,11 @@ def reval(&block)
 	return result
 end
 
+def deval(&block)
+	f = yield
+	return eval(f,block.binding).to_s + "\n" 
+end
+
 #########################################################################################################
 # A GTime object is meant to hold elapsed time, in seconds. With the methods defined
 # here you could easily say:

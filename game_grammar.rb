@@ -30,6 +30,8 @@ module Adventure
 		"south","southwest","west","northwest"
 	]
 	
+	$GAME_ADJ = []
+	
 	def Adventure::reverse_direction( direction )
 		{:north=>:south, :northeast=>:southwest, :east=>:west,
 			:southeast=>:northwest, :south=>:north, :southwest=>:northeast,
@@ -86,16 +88,22 @@ module Adventure
 	# to commands understood by the game.
 	def Adventure::adjust_english( text )
 		adj = []
+		text.gsub!(/ the | a /," ")
 		text.gsub!(/^pick up/,"take")
 		text.gsub!(/^&/,"inspect")
 		text.gsub!(/^discard/,"drop")
 		text.gsub!(/^move/,"go")
 		text.gsub!(/^drink|^eat/,"consume")
+		text.gsub!(/any /) do |match| adj << $&; '' end
 		text.gsub!(/^climb|^swim|^run/) do 
 			|match|
 			adj << $&
 			"go"
 		end
+		text.squeeze!(" ")
+		$GAME_ADJ = adj
+		#puts 'adjectives = ' + $GAME_ADJ.pretty
+		#puts 'text = ' + text.pretty
 		return text,adj
 	end
 

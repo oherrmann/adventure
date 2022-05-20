@@ -57,6 +57,7 @@ module Adventure
 			id = 0
 			config = []
 			config_hash = {}
+			node = 'main'
 			begin
 				File.open("Config.ini") do |file|
 					file.each do |line|
@@ -64,27 +65,43 @@ module Adventure
 					end
 				end
 				config.each do |val| 
-					u,v = val.split("=")
-					config_hash[ u ] = v
-				end
-				id = config_hash["game.id"].to_i
-				config_hash["game.id"] = (id + 1).to_s
-				file = File.open("Config.ini","w")
-				#config_hash.each_pair do |key,val|
-				#	file.write( key + "=" + val + "\n" )
-				config.each do |key|
-					u,v = key.split("=")
-					val = u
-					if v
-						val += "=" + config_hash[u]
+					if val[0] == '[' && val[-1] == ']'
+						node = val[1..-2]
+					else
+						u,v = val.split("=")
+						config_hash[ node + '/' + u ] = v
 					end
-					file.write( val + "\n" )
+				end
+				# This line sorts the hash alphabetically
+				config_hash = config_hash.sort_by { |key| key }.to_h
+				id = config_hash["main/game.id"].to_i
+				config_hash["main/game.id"] = (id + 1).to_s
+				file = File.open("Config.ini","w")
+				lastNode = ''
+				fullKey = ''
+				config_hash.each do |key,val|
+					fullKey = key
+					node, key = fullKey.split("/")
+					if node != lastNode
+						file.write( "[" + node + "]\n")
+						lastNode = node
+					end
+					file.write( key + "=" + val + "\n" )
 				end
 				file.close
 			rescue StandardError => err
-				puts( "The configuration file could not be accessed or interpretted: " + err )
+				puts( "The configuration file could not be accessed or interpretted: " + err.message )
 			end
 			return id,config_hash
+		end
+		
+		# Displays info to the user terminal.
+		def Game.inform( text = "" )
+			if text.class == Array
+				@@messages += text
+			elsif text.class == String
+				@@messages << text
+			end
 		end
 		
 		# Initializes the gamefile
@@ -165,7 +182,9 @@ module Adventure
 				end
 				# Create object file if it does not exist. Load objects.
 				unless @object_file[ @gamefile + "/" + name ]
-					@object_file[ @gamefile + "/" + name ] = Container.new("room","room " + name )
+					room = Container.new("room","room " + name )
+					room.moveable = false
+					@object_file[ @gamefile + "/" + name ] = room
 					array = @last_vars["object"]
 					objects = []
 					if array
@@ -188,8 +207,8 @@ module Adventure
 			@location = location
 			@room_path.push( @gamefile+"/"+location )
 			room_path_maximum = 100
-			if @config["room.path.maximum"]
-				room_path_maximum = @config["room.path.maximum"]
+			if @config["rooms/room.path.maximum"]
+				room_path_maximum = @config["rooms/room.path.maximum"].to_i
 			end
 			if @room_path.size > room_path_maximum
 				room = @room_path.shift
@@ -200,11 +219,11 @@ module Adventure
 		end
 		
 		# Play the game
-		def play( name="Bob", mode = 0, room = @config["start.room"] )
+		def play( name="Gwen", mode = 0, room = @config["main/start.room"] )
 			#break unless @gamefile
 			@mode = mode
 			@playing = true
-			log( Adventure::ts(@config["date.format"]) + " - Game started." )
+			log( Adventure::ts(@config["main/date.format"]) + " - Game started." )
 			@players[0] = GPlayer.new( name )
 			@players[0].subscribe( :death ) {|p| @playing = false }
 			@players[0].take( GObject.new("torch","a torch") )
@@ -226,16 +245,7 @@ module Adventure
 				other_turns()
 			end
 			update() if @@messages.size > 0
-			log( Adventure::ts(@config["date.format"]) + " - Game ended." )
-		end
-		
-		# Displays info to the user terminal.
-		def Game.inform( text = "" )
-			if text.class == Array
-				@@messages += text
-			elsif text.class == String
-				@@messages << text
-			end
+			log( Adventure::ts(@config["main/date.format"]) + " - Game ended." )
 		end
 		
 		def clear_messages
@@ -314,6 +324,7 @@ module Adventure
 					@timer.minutes=10
 			end
 			@original, @adjectives = Adventure::adjust_english( @original )
+			#puts "adjectives = " + @adjectives.pretty
 			input = @original.downcase
 			case input[input.size-1,1]
 				when "?"
@@ -381,8 +392,8 @@ module Adventure
 		end
 		
 		def programmer_info( text )
-			Game.inform( "location = " + @gamefile + "/" + @location + "\n")
-			Game.inform( "time = " + @timer.to_s )
+			puts "location = " + @gamefile + "/" + @location + "; "
+			puts "time = " + @timer.to_s 
 		end
 		
 		# The take command attempts to pick up objects in a room.
@@ -395,7 +406,7 @@ module Adventure
 		
 		# The drop command attempts to discard objects in a room.
 		def drop_item( text )
-			#@players[0].inventory.take_from( gobject, @object_file[ @gamefile + "/" + @location ] )
+			@players[0].inventory.take_from( text[0], @object_file[ @gamefile + "/" + @location ] )
 		end
 		
 		# Attempts to move the player in a direction
@@ -541,6 +552,11 @@ module Adventure
 				end
 				# check for objects
 				if object_file( @location ).items > 0
+					object_file( @location ).each { |object|
+						if object.hidden != true
+							object.seen = true
+						end
+					}
 					Game.inform( "The following objects can be seen: " + list_objects( object_file( @location ) ) )
 				end
 			else
@@ -548,13 +564,13 @@ module Adventure
 			end
 		end
 		
-		def list_objects( list )
+		def list_objects( list, hidden = false )
 			if list.class == Array
 				return list.map { |e| e[1] }.join( ", ")
 			elsif list.class == String
 				return list.split(",").map { |e| "a " + e }.join( ", ")
 			elsif list.class == Container
-				return list.all_items.join( ", " )
+				return list.all_items(hidden).join( ", " )
 			end
 		end
 		
@@ -627,7 +643,7 @@ module Adventure
 				when "objects"
 					Game.inform( @object_file.inspect )
 				when "inventory"
-					Game.inform("You're inventory includes " + @players[0].inventory.all_items().join(", ") )
+					Game.inform("Your inventory includes " + @players[0].inventory.all_items().join(", ") )
 				when "timer"
 					timer,res = @timer.dhms, []
 					if timer[0] == 1 then res << "1 day" end
@@ -665,11 +681,11 @@ module Adventure
 		# is playing. The inspect command may also be abbreviated to '&'.
 		def int_inspect( text )
 			text = text.join(" ")
-			if @config["command.inspect"] == "yes"
+			if @config["prog/command.inspect"] == "yes"
 				begin
-					Game.inform( reval{text} )
+					Game.inform( deval{text} )
 				rescue Exception => e
-					Game.inform( "Inspect Fail!: " + e )
+					Game.inform( "Inspect Fail!: " + e.class.name )
 				end
 			else
 				Game.inform( "I do not understand." )
@@ -683,19 +699,20 @@ module Adventure
 		# in the game, including those in other files. 
 		def goto_room( text )
 			room = text[0]
-			if @config["command.goto"] == "yes"
+			if @config["prog/command.goto"] == "yes"
 				if room["/"]
 					room = room.split("/")[1]
 					set_gamefile( text[0].split("/")[0] )
 				end
 				if upload_room( room )
+					@players[0].path.clear()
 					set_location( room )
 				else
 					Game.inform( "That room cannot be found." )
 				end
 			else
 				Game.inform( "I cannot execute that command in player mode." )
-  		end
+			end
 		end
 		
 		# The reload_room method allows the developer to reload a room during testing.
@@ -707,6 +724,10 @@ module Adventure
 					Game.inform( "Room #{text[0]} could not be found in #{@gamefile}." )
 				end
 			end
+		end
+		
+		def to_s()
+			return "<#Ruby Caves Adventure Game!>"
 		end
 		
 	end #Game class
