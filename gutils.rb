@@ -89,6 +89,8 @@ def deval(&block)
 	return eval(f,block.binding).to_s + "\n" 
 end
 
+
+=begin
 #########################################################################################################
 # A GTime object is meant to hold elapsed time, in seconds. With the methods defined
 # here you could easily say:
@@ -269,6 +271,8 @@ class Numeric
 		return result
 	end
 end # Numeric class
+=end
+
 
 #########################################################################################################
 # classes added to base classes to allow "pretty prints," and classes
@@ -279,9 +283,9 @@ class Object
 	def pretty( level = 0 )
 		indent = ( "  " * level )
 		indent2 = ( "  " * ( level + 1 ) )
-		result = "\n" + indent + "<" + self.class.name + ":" + self.object_id.to_s
+		result = indent + "<" + self.class.name + ":" + self.object_id.to_s
 		self.instance_variables.each do |field|
-			result += "\n" + indent2 + field + " = "
+			result += "\n" + indent2 + field.to_s + " = "
 			value = self.send( :instance_variable_get, field.to_sym )
 			if value.respond_to? :pretty
 				result += value.pretty( level + 1 )
@@ -323,14 +327,18 @@ class Symbol
 	def pretty( level = 0 )
 		return ":" + self.to_s
 	end
+	# This is just a convenience thing... 
+	def +(other)
+		return (self.to_s + other.to_s).to_sym
+	end
 end
 
 class Hash
 	def pretty( level = 0 )
 		indent = ( "  " * level )
 		indent2 = ( "  " * ( level + 1 ) )
-		return "{}" if self.size == 0
-		result = "\n" + indent + "{"
+		return indent + "{}" if self.size == 0
+		result = indent + "{"
 		self.each_pair do
 			|key, value|
 			result += "\n"
@@ -339,11 +347,11 @@ class Hash
 			else
 				result += indent2 + key.inspect
 			end
-			result += " => "
+			result += " =>\n"
 			if value.respond_to? :pretty
-				result += value.pretty( level + 1 )
+				result += indent2 + value.pretty( level + 1 )
 			else
-				result += value.inspect
+				result += indent2 + value.inspect
 			end
 		end
 		result += "\n" + indent + "}"
@@ -353,7 +361,8 @@ end
 
 class Numeric
 	def pretty( level = 0 )
-		return self.to_s
+		indent = ( "  " * level )
+		return "\n" + indent + self.to_s
 	end
 end
 
@@ -362,15 +371,15 @@ class Array
 	def pretty( level = 0 )
 		indent = ( "  " * level )
 		indent2 = ( "  " * ( level + 1 ) )
-		return "[]" if self.size == 0
+		return "\n" + indent + "[]" if self.size == 0
 		result = "\n" + indent + "["
 		self.each do
 			|value|
-			result += "\n"
+			#result += "\n"
 			if value.respond_to? :pretty
-				result += indent2 + value.pretty( level + 1 )
+				result += value.pretty( level + 1 ) + ","
 			else
-				result += indent2 + value.inspect
+				result += indent2 + value.inspect + ","
 			end
 		end
 		result += "\n" + indent + "]"

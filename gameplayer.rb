@@ -2,36 +2,16 @@
 # gameplayer.rb
 # 
 # 
-require 'gameobjects'
+#require 'gameplayer'
 
 module Adventure
 	
-	module GHuman
-		MAX={:str=>20,:con=>20,:dex=>20,
-			:int=>20,:wis=>20,:cha=>20}
-		RACE="Human"
-	end
-	module GDwarf
-		MAX={:str=>30,:con=>20,:dex=>20,
-			:int=>17,:wis=>17,:cha=>20}
-		RACE="Dwarvish"
-	end
-	module GElf
-		MAX={:str=>20,:con=>18,:dex=>30,
-			:int=>22,:wis=>25,:cha=>20}
-		RACE="Elvish"
-	end
-	module GOrc
-		MAX={:str=>22,:con=>15,:dex=>15,
-			:int=>10,:wis=>10,:cha=>12}
-		RACE="Orkish"
-	end
-	
 	class GPlayer < GObject
-		include GHuman
 		def initialize( name )
 			super( name, "player" )
 			@inventory = Container.new( "inventory", name + "'s inventory" )
+			@hands = Container.new("hands", "what is in your hands")
+			@last_handled = nil
 			@status = {}
 			@rooms = []
 			@alive = true
@@ -43,10 +23,36 @@ module Adventure
 			@str, @con, @dex, @int, @wis, @cha = [20] * 6
 			@experience = 0
 			@energy = 100
+			
+			@stamina = 100
+			@hunger = 0
+			@thirst = 0
+			
 		end
 		
-		attr_accessor :name, :inventory, :status, :location, :last_location, :last_direction, :rooms, :path
-		
+		def pretty(level=0)
+			indent = ( "  " * level )
+			indent2 = ( "  " * ( level + 1 ) )
+			result = indent + "<" + self.class.name + ":" + self.object_id.to_s
+			result += "\n" + indent2 + "@name:" + @name
+			result += "\n" + indent2 + "@desc:" + @description
+			result += "\n" + indent2 + "@lctn:" + @location
+			result += "\n" + indent2 + "@last_location:" + @last_location
+			result += "\n" + indent2 + "@last_direction:" + @last_direction
+			result += "\n" + indent2 + "@experience:" + @experience.to_s
+			result += "\n" + indent2 + "@energy:" + @energy.to_s
+			result += "\n" + indent2 + "@stamina:" + @stamina.to_s
+			result += "\n" + indent2 + "@thirst:" + @thirst.to_s
+			result += "\n" + indent2 + "@hunger:" + @hunger.to_s
+			result += "\n" + indent2 + "@hands:" + @hands.pretty(level + 1)
+			result += "\n" + indent2 + "@inventory:" + @inventory.pretty(level + 1)
+			result += indent + ">"
+			return result
+		end			
+
+		attr_accessor :name, :inventory, :hands, :last_handled, :status, :location, 
+			:last_location, :last_direction, :rooms, :path
+				
 		def take( object )
 			object.seen = true
 			@inventory.add( object )

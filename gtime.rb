@@ -145,6 +145,13 @@ class GTime
 		return "#<GTime: " + @time.to_s + ">"
 	end
 	
+	def out
+		x = self.hms
+		x[1] = ('0' + x[1].to_s)[-2,2]
+		x[2] = ('0' + x[2].to_s)[-2,2]
+		return x[0].to_s + ":" + x[1] + ":" + x[2]
+	end
+	
 end # GTime class
 
 class Numeric

@@ -30,6 +30,12 @@ module Adventure
 		"south","southwest","west","northwest"
 	]
 	
+	$directions_all = [ 
+		"north", "northeast","east","southeast",
+		"south","southwest","west","northwest",
+		"up","down"
+	]
+
 	$GAME_ADJ = []
 	
 	def Adventure::reverse_direction( direction )
@@ -38,10 +44,46 @@ module Adventure
 			:west=>:east,:northwest=>:southeast,:up=>:down,:down=>:up,
 			:in=>:out,:out=>:in}[ direction.to_sym ]
 	end
-
+	
+	$cardinal_numbers = [
+		:one, :two, :three, :four, :five, :six, :seven, :eight, :nine, :ten,
+		:eleven, :twelve, :thirteen, :fourteen, :fifteen, :sixteen, :seventeen,
+		:eighteen, :nineteen, :twenty
+	]
+	$ordinal_numbers = {
+		:first=>1, :second=>2, :third=>3, :fourth=>4, :fifth=>5, 
+		:sixth=>6, :seventh=>7, :eighth=>8, :ninth=>9, tenth=>10
+	}
+	
+	# If there are three choices in a line, the first is "l", the middle/center is "c",
+	# and the last/rightmost is "r". TODO: A way to specify "second from left" or
+	# "third from last".
+	$lcr = {
+		:left=>"a",:middle=>"c",:center=>"c", :right=>"b", :last=>"b"
+	}
+	
+	Adventure::exit_list( text , num_choices )
+		offset = 0
+		position = ""
+		result = -1
+		if text.length == 3 && text[1] = "from"
+			offset = ( $ordinal_numbers[ text[0].to_sym ] ) - 1
+			pos = $lcr[ text[0].to_sym ]
+			a = 1; b = num_choices
+			op = pos == "l" ? "+" : "-"
+			return result if pos == "c"
+			begin
+				result = eval(pos + op + offset.to_s)
+			rescue
+				return -1
+			end
+		end
+		return result
+	end
+	
 	# list_to_english takes a array of items and lists them in human-readable fashion.
 	# For example, list_to_english( ["a","b","c"] ) should be rendered as:
-	# "a, b and c"
+	# "a, b, and c"
 	def Adventure::list_to_english( text )
 		#peval {"text"}
 		items = text.length
@@ -52,7 +94,8 @@ module Adventure
 		(items-2).times do |x| 
 			result += ( text[x] + ", " )
 		end
-		result += text[ items - 2 ] + " and " + text[ items - 1 ]
+		# Added the Oxford comma below.
+		result += text[ items - 2 ] + ", and " + text[ items - 1 ]
 		return result
 	end
 	
@@ -89,12 +132,14 @@ module Adventure
 	def Adventure::adjust_english( text )
 		adj = []
 		text.gsub!(/ the | a /," ")
-		text.gsub!(/^pick up/,"take")
+		text.gsub!(/^pick up|^grab/,"take")
+		text.gsub!(/^@/,"goto")
 		text.gsub!(/^&/,"inspect")
 		text.gsub!(/^discard/,"drop")
+		text.gsub!(/^what/,"what")
 		text.gsub!(/^move/,"go")
 		text.gsub!(/^drink|^eat/,"consume")
-		text.gsub!(/any /) do |match| adj << $&; '' end
+		text.gsub!(/ any /) do |match| adj << $&; ' ' end
 		text.gsub!(/^climb|^swim|^run/) do 
 			|match|
 			adj << $&
@@ -113,44 +158,6 @@ module Adventure
 		def Die.roll( max )
 			return rand( max ) + 1
 		end
-	end # Die class	
-	
-	class Door
-		def initialize( id, key="", locked=false )
-			@id = id
-			@key = key
-			@locked = locked
-		end
-		
-		def lock( key )
-			if key == @key
-				@locked = true
-			else
-				return false
-			end
-		end
-		
-		def unlock( key )
-			if key == @key
-				@locked = false
-				return true
-			else
-				return false
-			end
-		end
-		
-		def locked?
-			return @locked == true
-		end
-		
-		def unlocked?
-			return @locked == false
-		end
-		
-		def key
-			return @key
-		end
-		
-	end # Door class
+	end # Die class
 	
 end # Adventure module
