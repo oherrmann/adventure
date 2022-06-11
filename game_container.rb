@@ -132,13 +132,14 @@ module Adventure
 		# or removing it from a character inventory and placing it in a room inventory. The
 		# 'from' inventory is _self_, and the 'to' inventory is specified as an argument. 
 		def take_from( text, to_container )
+			#puts $GAME_ADJ.pretty
 			if self.contains?( text ) == 1 
 				obj = self.match( text )
 				self.drop( obj )
 				to_container.add( obj )
 				Adventure::Game.inform( "A " + obj.name + " has been taken from " + self.name )
 				Adventure::Game.inform(" and added to " + to_container.name + ".")
-			elsif self.contains?( text ) > 1 && $GAME_ADJ.include?('any ')
+			elsif self.contains?( text ) > 1 && $GAME_ADJ.include?('any')
 				objs = self.match( text )
 				obj = objs[0]
 				self.drop( obj )

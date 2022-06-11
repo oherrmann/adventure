@@ -25,11 +25,13 @@ module Adventure
 		:"in"=>:i, :out=>:o, :up=>:u, :down=>:d
 	}
 	
+	# A list of the directions, less up and down
 	$directions = [ 
 		"north", "northeast","east","southeast",
 		"south","southwest","west","northwest"
 	]
 	
+	# A list of the directions, imcluding up and down
 	$directions_all = [ 
 		"north", "northeast","east","southeast",
 		"south","southwest","west","northwest",
@@ -38,6 +40,8 @@ module Adventure
 
 	$GAME_ADJ = []
 	
+	# Returns the reverse direction, given a direction. 
+	# Adventure::reverse_direction( "north" ) #=> :south
 	def Adventure::reverse_direction( direction )
 		{:north=>:south, :northeast=>:southwest, :east=>:west,
 			:southeast=>:northwest, :south=>:north, :southwest=>:northeast,
@@ -45,16 +49,27 @@ module Adventure
 			:in=>:out,:out=>:in}[ direction.to_sym ]
 	end
 	
-	$cardinal_numbers = [
-		:one, :two, :three, :four, :five, :six, :seven, :eight, :nine, :ten,
-		:eleven, :twelve, :thirteen, :fourteen, :fifteen, :sixteen, :seventeen,
-		:eighteen, :nineteen, :twenty
-	]
-	$ordinal_numbers = {
-		:first=>1, :second=>2, :third=>3, :fourth=>4, :fifth=>5, 
-		:sixth=>6, :seventh=>7, :eighth=>8, :ninth=>9, tenth=>10
+	# [Multidirection]
+	# We could say "[go] north [exit] one" to choose the first north exit
+	$cardinal_numbers = {
+		:one=>1, :two=>2, :three=>3, :four=>4, :five=>5, 
+		:six=>6, :seven=>7, :eight=>8, :nine=>9, :ten=>10,
+		:eleven=>11, :twelve=>12, :thirteen=>13, :fourteen=>14, 
+		:fifteen=>15, :sixteen=>16, :seventeen=>17,
+		:eighteen=>18, :nineteen=>19, :twenty=>20
 	}
 	
+	# [Multidirection]
+	# We could say "[go] north first [exit] from [the] right".
+	$ordinal_numbers = {
+		:first=>1, :second=>2, :third=>3, :fourth=>4, :fifth=>5, 
+		:sixth=>6, :seventh=>7, :eighth=>8, :ninth=>9, :tenth=>10,
+		:eleventh=>11, :twelfth=>12, :thirteenth=>13, :fourteenth=>14,
+		:fifteenth=>15, :sixteenth=>16, :seventeenth=>17, :eighteenth=>18,
+		:nineteenth=>19, :twentieth=>20
+	}
+	
+	# [Multidirection]
 	# If there are three choices in a line, the first is "l", the middle/center is "c",
 	# and the last/rightmost is "r". TODO: A way to specify "second from left" or
 	# "third from last".
@@ -62,15 +77,16 @@ module Adventure
 		:left=>"a",:middle=>"c",:center=>"c", :right=>"b", :last=>"b"
 	}
 	
-	Adventure::exit_list( text , num_choices )
+	# [Multidirection]
+	def Adventure::exit_list( text , num_choices )
 		offset = 0
 		position = ""
 		result = -1
-		if text.length == 3 && text[1] = "from"
+		if text.length == 3 && text[1] == "<from>"
 			offset = ( $ordinal_numbers[ text[0].to_sym ] ) - 1
-			pos = $lcr[ text[0].to_sym ]
+			pos = $lcr[ text[2].to_sym ]
 			a = 1; b = num_choices
-			op = pos == "l" ? "+" : "-"
+			op = pos == "a" ? "+" : "-"
 			return result if pos == "c"
 			begin
 				result = eval(pos + op + offset.to_s)
@@ -130,7 +146,8 @@ module Adventure
 	# The adjust_english method takes command strings entered by the user and adjusts them
 	# to commands understood by the game.
 	def Adventure::adjust_english( text )
-		adj = []
+		adj = []; key = []
+		text += " "
 		text.gsub!(/ the | a /," ")
 		text.gsub!(/^pick up|^grab/,"take")
 		text.gsub!(/^@/,"goto")
@@ -139,17 +156,15 @@ module Adventure
 		text.gsub!(/^what/,"what")
 		text.gsub!(/^move/,"go")
 		text.gsub!(/^drink|^eat/,"consume")
-		text.gsub!(/ any /) do |match| adj << $&; ' ' end
-		text.gsub!(/^climb|^swim|^run/) do 
-			|match|
-			adj << $&
-			"go"
-		end
+		text.gsub!(/ any /) {|m| adj << $&.strip; ' '}
+		text.gsub!(/^climb|^swim|^run/) {|m| adj << $&; "go" }
+		text.gsub!(/ exit /,' ')
+		text.gsub!(/ from /) {|m| key << $&.strip; " <from> " }
 		text.squeeze!(" ")
 		$GAME_ADJ = adj
 		#puts 'adjectives = ' + $GAME_ADJ.pretty
 		#puts 'text = ' + text.pretty
-		return text,adj
+		return text,adj, key
 	end
 
 	

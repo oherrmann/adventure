@@ -23,22 +23,12 @@
 		<location id='B'>
 			<type value="chamber" />
 			<description>You are in a small inner chamber of the cave.
-			Very little light filters in from the south. You smell something odd
-			to the west. There are two chambers to the west.</description>
+			Very little light filters in from the south.
+			There is another chamber to the west.</description>
 			<direction dir="south" dest="A" text="" />
-			<direction dir="west-1" dest="C" text="" />
-			<direction dir='west-2' dest='B-1' text='' />
+			<direction dir="west" dest="C" text="" />
 			<light value="20" />
 			<object id="torch" description="a torch" />
-		</location>
-		<!-- [MultiDirection]  -->
-		<location id='B-1'>
-			<type value='chamber' />
-			<description>You are in a small nook to the side of the previous chamber.
-			You smell something strange, maybe rotten here.</description>
-			<food type='mushrooms' quantity='10' grow='30.mins' effect='health+10;hunger=0' />
-			<light value='0' />
-			<direction dir='east' dest='B' text='' />
 		</location>
 		<location id='C'>
 			<type value="chamber" />
@@ -129,7 +119,7 @@
 			<extends dir="south" dest="F-6" text="" />
 			<direction dir="west" dest="K" text="" />
 			<light value="10" />
-			<water value="true" potable="true" />
+			<water value="true" />
 		</location>
 		<location id='G'>
 			<type value="chamber" />

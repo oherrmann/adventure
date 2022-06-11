@@ -58,7 +58,8 @@ module Adventure
 			result += "\n" + indent2 + "@desc:" + @description
 			result += "\n" + indent2 + "@id:" + @id.to_s + " (" + @id.class.name + ")"
 			result += "\n" + indent2 + "@state:" + @state.to_s
-			result += "\n" + indent2 + "{" + @seen.pretty + "," + @hidden.pretty + "," + @moveable.pretty + "}"
+			result += "\n" + indent2 + "{seen:" + @seen.pretty + ",hidden:" + @hidden.pretty 
+			result += ",moveable:" + @moveable.pretty + "}"
 			result += "\n" + indent2 + "@attributes:\n" + @attributes.pretty(level + 1)
 			result += "\n" + indent + ">"
 			return result

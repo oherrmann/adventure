@@ -3,7 +3,8 @@
 # 
 # 
 #require 'gameplayer'
-
+# Updated 2022.06.05 19:32:25 Changes for multi-direction
+# 
 module Adventure
 	
 	class GPlayer < GObject
@@ -21,12 +22,12 @@ module Adventure
 			@last_direction = ""
 			# Strength, Constitution, Dexterity, Intelligence, Wisdom, and Charisma
 			@str, @con, @dex, @int, @wis, @cha = [20] * 6
-			@experience = 0
-			@energy = 100
-			
-			@stamina = 100
-			@hunger = 0
-			@thirst = 0
+
+			@experience = 0 # exp
+			@energy = 100   # ene
+			@stamina = 100  # sta
+			@hunger = 0     # hun
+			@thirst = 0     # ths
 			
 		end
 		
@@ -51,7 +52,8 @@ module Adventure
 		end			
 
 		attr_accessor :name, :inventory, :hands, :last_handled, :status, :location, 
-			:last_location, :last_direction, :rooms, :path
+			:last_location, :last_direction, :rooms, :path, :experience, :energy, :stamina,
+			:thirst, :hunger
 				
 		def take( object )
 			object.seen = true
@@ -75,15 +77,22 @@ module Adventure
 		# or false if the player cannot go back.
 		def go_back?
 			if @path.back
-				return Adventure::reverse_direction( @path.back )
+				return Adventure::reverse_direction( @path.back[0] )
+			end
+			return false
+		end
+		
+		def go_back_room
+			if @path.back_room
+				return @path.back_room
 			end
 			return false
 		end
 		
 		# player.go is called when a player goes in a direction. Consideration for the 
 		# stack pointer should be taken for 'back' direction.
-		def go( direction, back = false )
-			@path.add( direction )
+		def go( direction, room, counter, back = false )
+			@path.add( direction, room, counter )
 			if back
 				@path.backward()
 			else
@@ -107,6 +116,13 @@ module Adventure
 		
 		# Display the player's stati in a human readable format.
 		def status
+			"experience,energy,stamina,hunger,thirst".split(",").map do |attr|
+				val = "%5s" % ("%0.2f" % self.send( attr.to_sym ))
+				"%12s = %s" % [attr.capitalize, val]
+			end
+				
+		end
+		def status_old
 			["strength","constitution","dexterity","intelligence",
 				"wisdom","charisma","energy","experience"].map do |attr|
 				val = "%5s" % ("%0.2f" % self.send( attr.to_sym ))
@@ -118,6 +134,31 @@ module Adventure
 		# strength=strength-1 and update the player. Other effects on the player can
 		# also be performed, like "die" will kill the player. 
 		def adjust( text )
+			text.split(";").each do |eff|
+				if eff =~ /(exp|ene|sta|hun|ths|experience|energy|stamina|hunger|thirst)([+-])([0-9.]+)/
+					at, op, ch = $~[1], $~[2], $~[3].to_i
+					if op == "-" then ch = 0 - ch end
+					call = {:exp=>:experience,:ene=>:energy,:sta=>:stamina,
+						:hun=>:hunger,:ths=>:thirst}[at.to_sym]
+					call = at.to_sym if call.nil?
+					# Symbol#+ is defined in gutils.rb
+					begin
+						$SYMBOL_SEP = ''
+						self.send( call + "=", self.send( call ) + ch )
+					rescue Exception => e
+						Game.inform("There was a problem with the 'effect' code:")
+						Game.inform( eff )
+						Game.inform( e.class.name + ": " + e.message )
+					ensure
+						$SYMBOL_SEP = '_'
+					end
+				elsif eff == "die"
+					kill_player()
+				end
+			end
+		end
+		
+		def adjust_old( text )
 			text.split(";").each do |prim|
 				if prim =~ /(str|con|dex|int|wis|cha|ene|exp)([-+])([0-9.]+)/
 					at = prim[0..2]
@@ -135,6 +176,7 @@ module Adventure
 				end
 			end
 		end
+		
 		
 		def strength(); return @str; end
 		def constitution(); return @con; end
@@ -169,8 +211,6 @@ module Adventure
 				when 20...50 then notify( :"energy<50", self )
 			end
 		end
-		def experience(); return @experience; end
-		def experience=(val); @experience=val; end
 		
 =begin
 	GPlayer events
@@ -191,19 +231,34 @@ module Adventure
 	# Game.move to @players[0].path.<method> should probably be clarified as calls 
 	# to methods in GPlayer that call GPath.
 	class GPath
-		def initialize(maximum)
-			@maximum=maximum
-			@path=[]
-			@ptr=0
+		def initialize( maximum )
+			@maximum = maximum
+			@path = []
+			@ptr = 0
+		end
+		
+		def pretty( level = 0 )
+			indent = ( "  " * level )
+			indent2 = ( "  " * ( level + 1 ) )
+			result = indent + "<" + self.class.name
+			result += "\n" + indent2 + "@maximum:" + @maximum.to_s
+			result += "\n" + indent2 + "@ptr:" + @ptr.to_s
+			result += "\n" + indent2 + "@path:"
+			result += "\n" + indent2 + "["
+			@path.each {|val| result += val.to_s + ",\n" + indent2 + " " }
+			rl = result.length - indent2.length - 4
+			result = result[0..rl]
+			result += "]"
+			return result
 		end
 		# GPath.add stacks a direction on the path. It also maintains the size of the stack,
 		# and the location of the 'back' pointer. 
-		def add(direction)
-			@path.push direction
+		def add( direction, room, counter )
+			@path.push( [direction, room, counter] )
 			#if @ptr == @path.size-1
 			#	@ptr = @path.size
 			#end
-			if @path.size > @maximum
+			while @path.size > @maximum
 				@path.shift
 				@ptr -= 1 unless @ptr == 0
 			end
@@ -213,6 +268,15 @@ module Adventure
 		def back
 			unless @ptr == 0 || @path[@ptr-1] == "back"
 				@path[@ptr-1]
+			else
+				false
+			end
+		end
+		
+		# GPath.back_room returns the room that the last move came from.
+		def back_room
+			unless @ptr == 0 || @path[@ptr-2] == "back"
+				@path[@ptr-2][1]
 			else
 				false
 			end
@@ -233,7 +297,7 @@ module Adventure
 		end
 		# Returns the path. Used by 'what path' or 'check path' queries.
 		def path
-			return @path
+			return @path.map {|move| move[0].to_s + "-" + move[2].to_s + " (room " + move[1].to_s + ")" }
 		end
 		# Returns the current state of the backward movement pointer. I don't think this is
 		# used by anything at the game or player level, I think I just implemented this for
@@ -248,10 +312,11 @@ module Adventure
 		def fix_path()
 			result = []
 			@path.each do |direction|
+				direction, room, counter = direction
 				if direction == "back"
 					result.pop
 				else
-					result.push  direction
+					result.push( [direction, room, counter] )
 				end
 			end
 			@path = result

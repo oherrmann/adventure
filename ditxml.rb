@@ -20,8 +20,10 @@ module Adventure
 	# And then having the listener invoke itself:
 	# > listener.do( "filename.xml" )
 	# The room info can be obtained by calling:
-	# > listener.vars
-	# > listener.description
+	# > listener.vars          : contains information about the room
+	# > listener.description   : contains the text that should be displayed when in the room
+	# > listener.doors         : contains information about doors
+	# > listener.exits         : contains information about exits from the room
 	class LocationListener
 		include REXML::StreamListener
 		
@@ -31,13 +33,13 @@ module Adventure
 			@read_description = false
 			@identity = identity
 			@found = false
-			#@path = []
 			@text = []
 			@vars = {}
 			@doors = {}
 			@doorways = []
 			# New value to hold the GDirection objects 2022-05-30 18:40:50
 			@exits = {}
+			@food = []
 		end
 		
 		# This is a predefined method in StreamListener. It is called when an
@@ -57,23 +59,12 @@ module Adventure
 						@read_description = true
 					when "type"
 						@vars["type"] ||= attrs["value"]
-					when "direction"
-						#@vars[attrs["dir"]] ||= ["*",attrs["dest"],attrs["text"].to_s,attrs["file"].to_s, "@"]
-						x = GDirection.new("direction", attrs["dir"], attrs["dest"], attrs["text"] )
-						x.file = attrs["file"] if attrs["file"]
-						x.effect = attrs["effect"] if attrs["effect"]
-						@exits[ x.directions ] = x
-					when "extends"
-						#@vars[attrs["dir"]] ||= ["e",attrs["dest"],attrs["text"].to_s,attrs["file"].to_s, "@"]
-						x = GDirection.new("extends", attrs["dir"], attrs["dest"], attrs["text"] )
+					when "direction", "extends", "dropoff"
+						x = GDirection.new( name, attrs["dir"], attrs["dest"], attrs["text"] )
 						x.file = attrs["file"] if attrs["file"]
 						x.effect = attrs["effect"] if attrs["effect"]
 						@exits[ x.directions ] = x
 					when "doorway"
-						#@vars[attrs["dir"]] ||= ["d",attrs["dest"],attrs["text"].to_s,attrs["file"].to_s, attrs["id"]]
-						# Old doorway code
-						#@doors[attrs["id"].to_i] ||= [ attrs["key"].to_i, attrs["status"] ]
-						# New doorway code
 						x = Adventure::GDoor.new( attrs["id"].to_i )
 						x.state = attrs["status"]
 						@doorways << x
@@ -81,12 +72,6 @@ module Adventure
 						x.file = attrs["file"] if attrs["file"]
 						x.effect = attrs["effect"] if attrs["effect"]
 						x.door_id = attrs["id"].to_i
-						@exits[ x.directions ] = x
-					when "dropoff"
-						#@vars[attrs["dir"]] ||= ["f",attrs["dest"],attrs["text"].to_s,attrs["file"].to_s,attrs["effect"].to_s]
-						x = GDirection.new("dropoff", attrs["dir"], attrs["dest"], attrs["text"] )
-						x.file = attrs["file"] if attrs["file"]
-						x.effect = attrs["effect"] if attrs["effect"]
 						@exits[ x.directions ] = x
 					when "light"
 						@vars["light"] ||= attrs["value"].to_i
@@ -96,12 +81,18 @@ module Adventure
 						@vars["water"] ||= ( attrs["value"] == "true" )
 					when "water"
 						@vars["water"] ||= ( attrs["value"] == "true" )
+						@vars["water_ok"] ||= ( attrs["potable"] == "true" )
+					when "food"
+						x = Adventure::GFood.new( attrs["type"], attrs["quantity"], attrs["effect"], attrs["grow"] )
+						@food << x
 					when "object"
 						@vars["object"] ||= []
 						@vars["object"] << attrs
 					when "accident"
+						x = GAccident.new( attrs["type"], attrs["roll"], attrs["effect"], attrs["dir"], attrs["text"] )
+						x.die = attrs["die"] unless attrs["die"].nil?
 						@vars["accident"] ||= []
-						@vars["accident"] << [ attrs["type"], attrs["roll"], attrs["effect"], attrs["dir"], attrs["text"] ]
+						@vars["accident"] << x
 				end
 			end
 		end
@@ -138,12 +129,15 @@ module Adventure
 		end
 		
 		def doors
-			#return @doors
 			return @doorways
 		end
 		
 		def exits
 			return @exits
+		end
+		
+		def food
+			return @food
 		end
 		
 	end # LocationListener class

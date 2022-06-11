@@ -6,6 +6,8 @@ require './ditxml'
 require './game_grammar'
 require './gameobjects'
 require './game_container'
+require './game_weapons.rb'
+require './game_accidents.rb'
 require './gameplayer'
 require './gutils'
 require './gamemonster'
@@ -18,21 +20,11 @@ require 'date'
 module Adventure
 	$version = "0.1.0"
 	$understand = "I do not understand what you mean."
-	LOC_TYPE = 0
-	LOC_DEST = 1
-	LOC_TEXT = 2
-	LOC_FILE = 3
-	LOC_DOOR = 4
-	LOC_EFFECT = 4
 	ACC_TYPE = 0
 	ACC_ROLL = 1
 	ACC_EFFECT = 2
 	ACC_FROM = 3
 	ACC_TEXT = 4
-	GO_DIRECTION = "*"
-	GO_DROPOFF = "f"
-	GO_DOORWAY = "d"
-	GO_EXTENDS ="e"
 
 	class Game
 		def initialize( gamefile )
@@ -220,15 +212,26 @@ module Adventure
 									object = GKey.new(obj_id,[],obj_description)
 									doors = ele["door_list"].split(",")
 									object.door_list = doors.map {|door| door.to_i }
-									["id","name","description","door_list"].each {|v| ele.delete(v) }
+									object.seen = ele["seen"]=="true" || false
+									object.hidden = ele["hidden"]=="true" || false
+									object.moveable = ele["moveable"]=="true" || true
+									["id","name","description","door_list","seen","hidden","moveable"].each {|v| ele.delete(v) }
 									object.mass_set_attr( ele )
 								when "sword", "club", "knife", "axe", "spear"
 									object = GWeapon.new( obj_id, obj_name, obj_desc )
-									["id","name","description"].each {|v| ele.delete(v) }
+									object.seen = ele["seen"]=="true" || false
+									object.hidden = ele["hidden"]=="true" || false
+									object.moveable = ele["moveable"]=="true" || true
+									["id","name","description","seen","hidden","moveable"].each {|v| ele.delete(v) }
 									object.mass_set_attr( ele )
+								when "gun", "rifle", "machinegun", "flamethrower"
+									# TODO: Not yet implemented
 								else
-									object = GObject.new( name, description )
-									["name","description"].each {|v| ele.delete(v) }
+									object = GObject.new( obj_id, obj_desc )
+									object.seen = ele["seen"]=="true" || false
+									object.hidden = ele["hidden"]=="true" || false
+									object.moveable = ele["moveable"]=="true" || true
+									["id","name","description","seen","hidden","moveable"].each {|v| ele.delete(v) }
 									object.mass_set_attr( ele )
 							end
 							objects << object
@@ -266,7 +269,7 @@ module Adventure
 			#break unless @gamefile
 			@mode = mode
 			@playing = true
-			log( Adventure::ts(@config["main/date.format"]) + " - Game started." )
+			#log( Adventure::ts(@config["main/date.format"]) + " - Game started." )
 			@players[0] = GPlayer.new( name )
 			@players[0].subscribe( :death ) {|p| @playing = false }
 			# @players[0].take( GObject.new("torch","a torch") )
@@ -290,7 +293,7 @@ module Adventure
 				other_turns()
 			end
 			update() if @@messages.size > 0
-			log( Adventure::ts(@config["main/date.format"]) + " - Game ended." )
+			#log( Adventure::ts(@config["main/date.format"]) + " - Game ended." )
 		end
 		
 		def clear_messages
@@ -345,10 +348,10 @@ module Adventure
 			end
 			if @last_command == "inspect" || @last_command == "check"
 				puts @@messages
-				log( @@messages )
+				#log( @@messages )
 			else
 				puts @@messages.wrap(70)
-				log( @@messages.wrap(70) )
+				#log( @@messages.wrap(70) )
 			end
 			@last_location = @location
 			clear_messages
@@ -370,7 +373,7 @@ module Adventure
 				else
 					@timer.minutes=10
 			end
-			@original, @adjectives = Adventure::adjust_english( @original )
+			@original, @adjectives, @keywords = Adventure::adjust_english( @original )
 			#puts "adjectives = " + @adjectives.pretty
 			input = @original.downcase
 			case input[input.size-1,1]
@@ -383,7 +386,7 @@ module Adventure
 				else
 					@punct="."
 			end
-			log( "> " + @original, 1 )
+			#log( "> " + @original, 1 )
 			return "noop" if input.length == 0
 			return input
 		end
@@ -391,20 +394,23 @@ module Adventure
 		# Interprets the user input.
 		def interpret( value = "noop" )
 			return nil if @playing == false
+			#puts "value = " + value.to_s # TESTING
 			value = value.split(" ")
 			command = value.shift
 			if Adventure::is_direction?( command )
-				value = [ command ]
+				value.unshift( command )
 				command = "go"
 			elsif Adventure::to_direction( command )
-				value = [ Adventure::to_direction( command ) ]
+				value.unshift( Adventure::to_direction( command ) )
 				command = "go"
 			elsif command == "back"
-				value = ["back"]
+				value.unshift( command )
 				command = "go"
 			end
 			@last_command = command
 			if command.length > 0
+				#puts "command = " + command.to_s # TESTING
+				#puts "value = " + value.to_s # TESTING
 				case command
 					when "noop"
 						@timer += 1.mins
@@ -482,26 +488,64 @@ module Adventure
 				@players[0].last_handled = obj
 				@players[0].hands.drop( obj )
 				@players[0].inventory.add( obj )
+				if @last_command == "unhold"
+					Game.inform( obj.description.to_s + " was replaced in inventory. ")
+				end
 			end
 		end
 		
 		# Attempts to move the player in a direction
 		def move( text )
-			direction = text[0]
-			# adjust for 'back' command
-			back = false
-			if direction == "back"
-				direction = @players[0].go_back?().to_s
-				back = true
-			end
-			# determine which counter
+			direction = text.shift()
 			counter = 0
-			z = 0
-			@room_exits.each_key {|key| if key[0] == direction then z += 1 end }
-			if z > 1
-				# Choose which exit
-				# temp code:
-				counter = 1
+			back = false
+			back_direction = []
+			exits = count_exits( direction )
+			if exits == 0 && direction != 'back'
+				Game.inform("There are no exits in that direction.")
+				return
+			elsif @room_exits[ [direction, counter ] ] && text.length == 0
+				# example: > go north
+				# do nothing... we are on-track
+			elsif direction == 'back'
+				# example: > back
+				back = true
+				direction = @players[0].go_back?().to_s
+				back_room = @players[0].go_back_room.to_s # 06/05/22
+				# Find the back direction that leads to the desired destination.
+				@room_exits.each_pair do
+					|k,v|
+					if v.destination == back_room then back_direction = v.directions end
+				end
+				direction, counter = back_direction
+			elsif exits > 1 && text.length == 0
+				Game.inform("You need to specify which exit to take.")
+				return
+			elsif text[0] =~ /^[0-9]+$/
+				# example: > go north 1
+				counter = text[0].to_i
+			elsif exits == 2 && text.length == 1 && ['a','b'].include?($lcr[text[0].to_sym])
+				# example: > go north right
+				counter = $lcr[text[0].to_sym] == 'a' ? 1 : 2
+			elsif exits == 3 && text.length == 1 &&  ['a','b','c'].include?($lcr[text[0].to_sym])
+				# example: > go north middle
+				case $lcr[text[0].to_sym]
+					when 'a' then counter = 1
+					when 'b' then counter = 3
+					when 'c' then counter = 2
+				end
+			elsif @keywords.include?("from")
+				# example: > go north second from left
+				counter = Adventure::exit_list( text, exits )
+			elsif not( text[0].nil? ) && $ordinal_numbers.key?( text[0].to_sym)
+				# example: > go north first
+				counter = $ordinal_numbers[text[0].to_sym]
+			elsif not( text[0].nil? ) && $cardinal_numbers.key?( text[0].to_sym)
+				# example: > go north one
+				counter = $cardinal_numbers[text[0].to_sym]
+			else
+				Game.inform( dont_understand )
+				return
 			end
 			direction = [direction, counter]
 			loc = @room_exits[ direction ]
@@ -514,7 +558,7 @@ module Adventure
 				item = keys[0]
 				if door_locked?( door ) && key < 1
 					Game.inform( "The door is locked." )
-					direction = "locked" # Setting the direction to 'locked' disables the move.
+					direction[0] = "locked" # Setting the direction to 'locked' disables the move.
 					@timer += 2.mins
 				elsif door_locked?( door ) && key > 0
 					door_unlock( door, item )
@@ -535,7 +579,7 @@ module Adventure
 					end
 					set_location( loc.destination )
 					Game.inform( loc.text ) if loc.text.length > 0
-					@players[0].go( text[0], back )
+					@players[0].go( direction[0], loc.destination, counter, back )
 					@players[0].adjust( loc.effect ) if loc.effect.length > 0
 					#@playing = false if @players[0].alive? == false
 					if loc.type == "extends"
@@ -612,30 +656,29 @@ module Adventure
 		# This routine checks to see if an accident should occur.
 		def check_for_accident
 			return unless @last_vars["accident"] 
-			accident = []
+			accident = [] # <--The list of accidents that actually occur
 			@last_vars["accident"].each do |acc|
-				next if acc[ACC_FROM] && acc[ACC_FROM] != @players[0].last_direction
-				accident = acc
-				roll = Die.roll( 20 )
-				if roll < accident[ACC_ROLL].to_i then accident = [] else break end
+				next if acc.source && acc.source != @players[0].last_direction
+				accident << acc if Die.roll( acc.die.nil? ? 20 : acc.die ) < acc.roll.to_i
 			end
 			if accident.size > 0
-				# The accident has occurred! 
-				Game.inform( "Warning: an accident has occured: " + accident[ACC_TYPE] )
-				Game.inform( accident[ACC_TEXT] )
-				@players[0].adjust( accident[ACC_EFFECT] )
-				#@playing = false if @players[0].alive? == false
+				# The accident(s) has/have occurred! 
+				accident.each do |acc|
+					Game.inform( "Warning: an accident has occured: " + acc.type )
+					Game.inform( acc.text ) unless acc.text.empty?
+					@players[0].adjust( acc.effect )
+				end
 			end
 		end
 		
 		# ***Not yet implemented***
-		# Eamine allows detailed looking at specific objects.
+		# #examine allows detailed looking at specific objects.
 		def examine( text )
 		end
 		
 		# 'look_to' is the basic handler for 'look' commands. There are two modes; 'look <direction>'
 		# and 'look around', which looks in all directions. Eventually, 'look <direction>' should cause
-		# the interpretter to give more detailed analysis that the more general 'look around'. Also,
+		# the interpretter to give more detailed analysis than the more general 'look around'. Also,
 		# It should be noted that 'look around' does not look up or down.
 		def look_to( value )
 			if value[0] == "around" || value == []
@@ -658,21 +701,23 @@ module Adventure
 				dirs = $directions.clone
 				while dirs.size > 0
 					dir = dirs.shift
-					rooms << dir if ( look( [dir] )[0] == 1 && vars[dir][LOC_TYPE] == GO_DIRECTION )
+					#rooms << dir if ( look( [dir] )[0] == 1 && vars[dir][LOC_TYPE] == GO_DIRECTION )
+					rooms << dir if ( look( [dir] )[0] == 1 && count_exits(dir, "direction") > 0 )
 				end
 				roomss = rooms.size
 				if roomss > 0 then rooms = Adventure::list_to_english( rooms ) end
 				if roomss == 1
-					Game.inform( "There is a room to the " + rooms + "." )
+					Game.inform( "There is an exit to the " + rooms + "." )
 				elsif roomss > 1 
-					Game.inform( "There are rooms to the " + rooms + "." )
+					Game.inform( "There are exits to the " + rooms + "." )
 				end
 				# Check for extended room ( extends tag )
 				rooms = []
 				dirs = $directions.clone
 				while dirs.size > 0
 					dir = dirs.shift
-					rooms << dir if ( look( [dir] )[0] == 1 && vars[dir][LOC_TYPE] == GO_EXTENDS )
+					#rooms << dir if ( look( [dir] )[0] == 1 && vars[dir][LOC_TYPE] == GO_EXTENDS )
+					rooms << dir if ( look( [dir] )[0] == 1 && count_exits(dir, "extends") > 0 )
 				end
 				roomss = rooms.size
 				if roomss == 8
@@ -686,7 +731,8 @@ module Adventure
 				dirs = $directions.clone
 				while dirs.size > 0
 					dir = dirs.shift
-					rooms << dir if ( look( [dir] )[0] == 1 && vars[dir][LOC_TYPE] == GO_DOORWAY )
+					#rooms << dir if ( look( [dir] )[0] == 1 && vars[dir][LOC_TYPE] == GO_DOORWAY )
+					rooms << dir if ( look( [dir] )[0] == 1 && count_exits(dir, "doorway") > 0 )
 				end
 				roomss = rooms.size
 				if roomss > 0 then rooms = Adventure::list_to_english( rooms ) end
@@ -700,7 +746,8 @@ module Adventure
 				dirs = $directions.clone
 				while dirs.size > 0
 					dir = dirs.shift
-					rooms << dir if ( look( [dir] )[0] == 1 && vars[dir][LOC_TYPE] == GO_DROPOFF )
+					#rooms << dir if ( look( [dir] )[0] == 1 && vars[dir][LOC_TYPE] == GO_DROPOFF )
+					rooms << dir if ( look( [dir] )[0] == 1 && count_exits(dir, "dropoff") > 0 )
 				end
 				roomss = rooms.size
 				if roomss > 0 then rooms = Adventure::list_to_english( rooms ) end
@@ -751,13 +798,13 @@ module Adventure
 		def look( text, rem = false )
 			text[0] = Adventure::to_direction( text[0] ) if Adventure::to_direction( text[0] )
 			dir = text[0] if ( text && Adventure::is_direction?( text[0] ) )
-			result = ""
-			if dir != "up" && dir != "down"
-				dir_show = "to the " + text[0]
-			elsif dir == "up"
+			result = [-1,""]
+			if dir == "up"
 				dir_show = "above you"
 			elsif dir == "down"
 				dir_show = "below you"
+			else
+				dir_show = "to the " + text[0]
 			end
 			if dir
 				# Only include the "looked" count if the player looked specifically in that 
@@ -765,7 +812,7 @@ module Adventure
 				# every time the player 'looked around'
 				if rem
 					# Symbol#+ is defined in gutils.rb
-					rem_looked = :looked_ + dir
+					rem_looked = :looked + dir
 					@rooms[@game_location.to_sym][1][rem_looked] ||= 0
 					@rooms[@game_location.to_sym][1][rem_looked] += 1
 				end
@@ -773,33 +820,66 @@ module Adventure
 				al = @last_vars["light"].to_i
 				al += 10 if tl > 0
 				ch = Die.roll( 20 )
-				if @last_vars[ dir ] && @last_vars[ dir ][LOC_TYPE]==GO_DIRECTION && al >= 10
-					result = [1,"There is an exit #{dir_show}."]
-				elsif @last_vars[ dir ] && @last_vars[ dir ][LOC_TYPE]==GO_EXTENDS && al >= 10
-					result = [1,"The room extends #{dir_show}."]
-				elsif @last_vars[ dir ] && @last_vars[ dir ][LOC_TYPE]==GO_DOORWAY && al >= 10
-					result = [1,"There is a door #{dir_show}."]
-				elsif @last_vars[ dir ] && @last_vars[ dir ][LOC_TYPE]==GO_DROPOFF && al >= 10
-					result = [1,"There is a dropoff #{dir_show}."]
-				elsif ( al >= 5 && al < 10 && ch > 10 )
-					result = [0,"You are not able to see anything #{dir_show}."]
-				elsif al < 5
-					result = [0,"It is too dark for you to see anything."]
-				elsif @last_vars[ dir ] && @last_vars[ dir ][LOC_TYPE]==GO_DIRECTION
-					result = [1,"There is an exit #{dir_show}."]
-				elsif @last_vars[ dir ] && @last_vars[ dir ][LOC_TYPE]==GO_EXTENDS
-					result = [1,"The room extends #{dir_show}."]
-				elsif @last_vars[ dir ] && @last_vars[ dir ][LOC_TYPE]==GO_DOORWAY
-					result = [1,"There is a door #{dir_show}."]
-				elsif @last_vars[ dir ] && @last_vars[ dir ][LOC_TYPE]==GO_DROPOFF
-					result = [1,"There is a dropoff #{dir_show}."]
-				else
-					result = [0,"You see nothing of interest #{dir_show}."]
+				ex = []
+				# Return immediately if you cannot see anything
+				if ( al >= 5 && al < 10 && ch > 10 )
+					result[0] = 0
+					result[1] = "You are not able to see anything #{dir_show}. "
+					@timer += 5.secs
+					return result
+				end
+				if al < 5
+					result[0] = 0
+					result[1] = "It is too dark for you to see anything. "
+					@timer += 5.secs
+					return result
+				end
+				# Check the exit types in each direction
+				["direction", "extends", "doorway", "dropoff"].each do |d|
+					ex << count_exits(dir, d )
+				end
+				if ex[0] == 1
+					result[0] = 1
+					result[1] += "There is an exit #{dir_show}. "
+				elsif ex[0] > 1
+					result[0] = 1
+					result[1] += "There are #{ex[0]} exits #{dir_show}. "
+				end
+				if ex[1] > 0 
+					result[0] = 1
+					result[1] += "The room extends #{dir_show}. "
+				end
+				if ex[2] == 1 
+					result[0] = 1
+					result[1] += "There is a door #{dir_show}. "
+				elsif ex[2] > 1
+					result[0] = 1
+					result[1] += "There are #{ex[2]} doors #{dir_show}. "
+				end
+				if ex[3] > 0 
+					result[0] = 1
+					result[1] += "There is a dropoff #{dir_show}. "
+				end
+				if result[0] < 0 
+					result[0] = 0
+					result[1] = "There is nothing of interest to see #{dir_show}. "
 				end
 			else
 				result = [-1,"Look where?"]
 			end
 			@timer += 5.secs
+			return result
+		end
+		
+		# #count_exits determines the number of exits of a type that are in a 
+		# certain direction. replaces code like:
+		#     @last_vars[ dir ][LOC_TYPE]==GO_XXX
+		def count_exits(dir, type="")
+			result = 0
+			@room_exits.each_pair do |key,val|
+				direction, counter = key
+				if direction == dir && ( val.type == type || type.empty? ) then result += 1 end
+			end
 			return result
 		end
 		
@@ -854,16 +934,17 @@ module Adventure
 		# The consume method allows the player to consume food and water in order to 
 		# regain energy and heal.
 		def consume( text )
+			
 			if text.member?( "water" )
 				@players[0].adjust( "ene+20;str+1" )
 				Game.inform( "Ahhhh! The pause that refreshes. ")
 				e = @players[0].energy()
-				Game.inform( "You're current energy level is " + e.to_s )
+				Game.inform( "Your current energy level is " + e.to_s )
 			elsif text.member?( "food" )
 				@players[0].adjust( "ene+50;str+2" )
 				Game.inform( "Very tasty! ")
 				e = @players[0].energy()
-				Game.inform( "You're current energy level is " + e.to_s )
+				Game.inform( "Your current energy level is " + e.to_s )
 			end
 		end
 		

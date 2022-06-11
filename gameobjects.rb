@@ -137,7 +137,8 @@ module Adventure
 			result += "\n" + indent2 + "@name:" + @name
 			result += "\n" + indent2 + "@desc:" + @description
 			result += "\n" + indent2 + "@damaged:" + @damaged.to_s
-			result += "\n" + indent2 + "{" + @seen.pretty + "," + @hidden.pretty + "," + @moveable.pretty + "}"
+			result += "\n" + indent2 + "{seen:" + @seen.pretty + ",hidden:" + @hidden.pretty 
+			result += ",moveable:" + @moveable.pretty + "}"
 			result += "\n" + indent2 + "@attributes:\n" + @attributes.pretty(level + 1)
 			result += "\n" + indent + ">"
 			return result
