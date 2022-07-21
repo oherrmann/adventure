@@ -97,7 +97,7 @@ class Object
 	def pretty( level = 0 )
 		indent = ( "  " * level )
 		indent2 = ( "  " * ( level + 1 ) )
-		result = indent + "<" + self.class.name + ":Object"
+		result = "\n" + indent + "<" + self.class.name + ":Object"
 		self.instance_variables.each do |field|
 			result += "\n" + indent2 + field.to_s + " = "
 			value = self.send( :instance_variable_get, field.to_sym )
@@ -137,13 +137,27 @@ class NilClass
 end
 
 class Symbol
-	$SYMBOL_SEP = '_'
 	def pretty( level = 0 )
 		return ":'" + self.to_s + "'"
 	end
-	# This is just a convenience thing... 
+	# Define Symbol#+ to add symbol text together
 	def +(other)
-		return (self.to_s + $SYMBOL_SEP + other.to_s).to_sym
+		return (self.to_s + other.to_s).to_sym
+	end
+end
+
+class Regexp
+	def pretty( level = 0 )
+	end
+	# Define Regexp#+ to add regular expressions together
+	def +(other)
+		x = ""
+		case other
+		when Regexp then x = other.source
+		when String then x = other
+		else x = other.to_s
+		end
+		return Regexp.new( self.source + x )
 	end
 end
 
@@ -151,8 +165,8 @@ class Hash
 	def pretty( level = 0 )
 		indent = ( "  " * level )
 		indent2 = ( "  " * ( level + 1 ) )
-		return indent + "{}" if self.size == 0
-		result = indent + "{\n" + indent2
+		return "{}" if self.size == 0
+		result = "\n" + indent + "{\n" + indent2
 		self.each_pair do
 			|key, value|
 			if key.class <= Numeric
@@ -168,7 +182,7 @@ class Hash
 			if value.class <= Numeric
 				result += value.to_s
 			elsif value.class <= String
-				result += "'" + key.to_s + "'"
+				result += "'" + value.to_s + "'"
 			elsif value.respond_to? :pretty
 				result += value.pretty( level + 1 )
 			else
@@ -184,8 +198,8 @@ end
 
 class Numeric
 	def pretty( level = 0 )
-		indent = ( "  " * level )
-		return "\n" + indent + self.to_s
+		#indent = ( "  " * level )
+		return self.to_s
 	end
 end
 
@@ -194,10 +208,9 @@ class Array
 	def pretty( level = 0 )
 		indent = ( "  " * level )
 		indent2 = ( "  " * ( level + 1 ) )
-		return "\n" + indent + "[]" if self.size == 0
+		return "[]" if self.size == 0
 		result = "\n" + indent + "["
-		self.each do
-			|value|
+		self.each do |value|
 			if value.respond_to? :pretty
 				result += value.pretty( level + 1 ) + ", "
 			else

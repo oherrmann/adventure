@@ -3,6 +3,11 @@
 # example:
 # 	<direction dir="north-1" dest="X1" text="You are on stairs leading up." file="lostcave.xml" />
 # 
+# x = GDirection.new("direction","north-1","X1","You are on stairs leading up")
+# x.file = "lostcave.xml"
+# x.effect = "experience+5"
+# x.door_id = ""
+# 
 module Adventure
 	class GDirection
 		def initialize( type, direction, destination, text="" )
@@ -79,7 +84,7 @@ module Adventure
 			unless @text.empty? then result += "text=\"" + @text + "\" " end
 			unless @file.empty? then result += "file=\"" + @file + "\" " end
 			unless @effect.empty? then result += "effect=\"" + @effect + "\" " end
-			unless @door_id.empty then result += "id=\"" + @door_id + "\" " end
+			unless @door_id.empty? then result += "id=\"" + @door_id + "\" " end
 			result += "/>"
 			return result
 		end

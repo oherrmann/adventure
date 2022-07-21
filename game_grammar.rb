@@ -69,21 +69,43 @@ module Adventure
 		:nineteenth=>19, :twentieth=>20
 	}
 	
+	$cards = {
+		1=>"one", 2=>"two", 3=>"three", 4=>"four", 5=>"five", 6=>"six", 7=>"seven",
+		8=>"eight", 9=>"nine", 10=>"ten", 11=>"eleven", 12=>"twelve", 13=>"thirteen",
+		14=>"fourteen", 15=>"fifteen", 16=>"sixteen", 17=>"seventeen", 18=>"eighteen",
+		19=>"nineteen", 20=>"twenty"
+	}
+
+	
+	
 	# [Multidirection]
-	# If there are three choices in a line, the first is "l", the middle/center is "c",
-	# and the last/rightmost is "r". TODO: A way to specify "second from left" or
-	# "third from last".
+	# If there are three choices in a line, the first is "a", the middle/center is "c",
+	# and the last/rightmost is "b". If there are two choices, they are left("a") and right("b").
 	$lcr = {
 		:left=>"a",:middle=>"c",:center=>"c", :right=>"b", :last=>"b"
 	}
 	
 	# [Multidirection]
+	# This is called when the <from> keyword is used. There should be three
+	# elements in the text array, and they should be like <offset>,from,<end>
+	# where offset is 1..20 or first..twentieth or one..twenty, and end is
+	# left or right or last.
 	def Adventure::exit_list( text , num_choices )
 		offset = 0
 		position = ""
 		result = -1
 		if text.length == 3 && text[1] == "<from>"
-			offset = ( $ordinal_numbers[ text[0].to_sym ] ) - 1
+			x = text[0].to_sym
+			if $ordinal_numbers.key?(x)
+				offset = $ordinal_numbers[x] - 1
+			elsif $cardinal_numbers.key?(x) - 1
+				offset = $cardinal_numbers[x]
+			elsif text[0] =~ /[0-9]+/
+				offset = text[0].to_i - 1
+			else
+				return -1
+			end
+			#offset = ( $ordinal_numbers[ text[0].to_sym ] ) - 1
 			pos = $lcr[ text[2].to_sym ]
 			a = 1; b = num_choices
 			op = pos == "a" ? "+" : "-"
@@ -150,21 +172,31 @@ module Adventure
 		text += " "
 		text.gsub!(/ the | a /," ")
 		text.gsub!(/^pick up|^grab/,"take")
+		text.gsub!(/^quit $|^exit $|^q $/,"bye ")
+		text.gsub!(/^b $/,"back ")
 		text.gsub!(/^@/,"goto")
 		text.gsub!(/^&/,"inspect")
 		text.gsub!(/^discard/,"drop")
-		text.gsub!(/^what/,"what")
+		text.gsub!(/^look at /,"examine ")
+		text.gsub!(/ inventory /," inv ")
+		# Replace occurrences of "to wwwww" with "to_wwwww"
+		text.gsub!(/( to )(\w+) /) {|m| " to_" + $~[2] }
+		text.gsub!(/^return /) {|m| if text[" to_inv "] then "replace " else "drop " end }
+		# Replace occurrences of "in wwwww" with "in_wwwww"
+		text.gsub!(/( in )(\w+) /) {|m|  " in_" + $~[2] }
 		text.gsub!(/^move/,"go")
 		text.gsub!(/^drink|^eat/,"consume")
 		text.gsub!(/ any /) {|m| adj << $&.strip; ' '}
-		text.gsub!(/^climb|^swim|^run/) {|m| adj << $&; "go" }
+		text.gsub!(/^climb |^swim |^run /) {|m| adj << $&; "go " }
+		text.gsub!(/^time $|^timer $/,"check timer ")
 		text.gsub!(/ exit /,' ')
+		text.gsub!(/^about /,"info ")
 		text.gsub!(/ from /) {|m| key << $&.strip; " <from> " }
+		text.strip!
 		text.squeeze!(" ")
+		#puts "-----> " + text.to_s.inspect
 		$GAME_ADJ = adj
-		#puts 'adjectives = ' + $GAME_ADJ.pretty
-		#puts 'text = ' + text.pretty
-		return text,adj, key
+		return text, adj, key
 	end
 
 	

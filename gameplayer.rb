@@ -6,12 +6,17 @@
 # Updated 2022.06.05 19:32:25 Changes for multi-direction
 # 
 module Adventure
+
+	$STATS = /^(exp|ene|sta|hun|ths|experience|energy|stamina|hunger|thirst)/
+	$stat_translate = {:exp=>:experience,:ene=>:energy,:sta=>:stamina,:hun=>:hunger,:ths=>:thirst}
 	
 	class GPlayer < GObject
 		def initialize( name )
 			super( name, "player" )
 			@inventory = Container.new( "inventory", name + "'s inventory" )
+			@inventory.seen = true
 			@hands = Container.new("hands", "what is in your hands")
+			@hands.seen = true
 			@last_handled = nil
 			@status = {}
 			@rooms = []
@@ -21,13 +26,22 @@ module Adventure
 			@last_location = ""
 			@last_direction = ""
 			# Strength, Constitution, Dexterity, Intelligence, Wisdom, and Charisma
-			@str, @con, @dex, @int, @wis, @cha = [20] * 6
+			#@str, @con, @dex, @int, @wis, @cha = [20] * 6
 
-			@experience = 0 # exp
-			@energy = 100   # ene
-			@stamina = 100  # sta
-			@hunger = 0     # hun
-			@thirst = 0     # ths
+			@experience = 0.to_f # exp NB: There are all 'Float' class variables
+			@energy = 100.to_f   # ene
+			@stamina = 100.to_f  # sta
+			@hunger = 0.to_f     # hun
+			@thirst = 0.to_f     # ths
+			
+			@next_sleep = nil
+			
+			@sleep = {
+				"<4"=>"ene-10;hun+20;ths+20;sta-50", 
+				"<6"=>"hun+20;ths+20;sta-25", 
+				"<8"=>"ene+50;hun+20;ths+20", 
+				"==8"=>"ene+100;hun+30;ths+30;sta+50", 
+				">8"=>"ene-10;hun+50;ths+50;sta-25"}
 			
 		end
 		
@@ -35,16 +49,18 @@ module Adventure
 			indent = ( "  " * level )
 			indent2 = ( "  " * ( level + 1 ) )
 			result = indent + "<" + self.class.name + ":" + self.object_id.to_s
-			result += "\n" + indent2 + "@name:" + @name
-			result += "\n" + indent2 + "@desc:" + @description
-			result += "\n" + indent2 + "@lctn:" + @location
-			result += "\n" + indent2 + "@last_location:" + @last_location
-			result += "\n" + indent2 + "@last_direction:" + @last_direction
+			result += "\n" + indent2 + "@name:" + @name.to_s
+			result += "\n" + indent2 + "@description:" + @description.to_s
+			result += "\n" + indent2 + "@location:" + @location.to_s
+			result += "\n" + indent2 + "@last_location:" + @last_location.to_s
+			result += "\n" + indent2 + "@last_direction:" + @last_direction.to_s
 			result += "\n" + indent2 + "@experience:" + @experience.to_s
 			result += "\n" + indent2 + "@energy:" + @energy.to_s
 			result += "\n" + indent2 + "@stamina:" + @stamina.to_s
 			result += "\n" + indent2 + "@thirst:" + @thirst.to_s
 			result += "\n" + indent2 + "@hunger:" + @hunger.to_s
+			result += "\n" + indent2 + "@next_sleep:" + @next_sleep.out unless @next_sleep.nil?
+			result += "\n" + indent2 + "@next_sleep:--:--:--" if @next_sleep.nil?
 			result += "\n" + indent2 + "@hands:" + @hands.pretty(level + 1)
 			result += "\n" + indent2 + "@inventory:" + @inventory.pretty(level + 1)
 			result += indent + ">"
@@ -53,11 +69,15 @@ module Adventure
 
 		attr_accessor :name, :inventory, :hands, :last_handled, :status, :location, 
 			:last_location, :last_direction, :rooms, :path, :experience, :energy, :stamina,
-			:thirst, :hunger
+			:thirst, :hunger, :next_sleep
 				
-		def take( object )
+		def take( object, hands = false )
 			object.seen = true
-			@inventory.add( object )
+			if hands
+				@hands.add( object )
+			else 
+				@inventory.add( object )
+			end
 		end
 		
 		def drop( object )
@@ -116,12 +136,12 @@ module Adventure
 		
 		# Display the player's stati in a human readable format.
 		def status
-			"experience,energy,stamina,hunger,thirst".split(",").map do |attr|
-				val = "%5s" % ("%0.2f" % self.send( attr.to_sym ))
+			%w{experience energy stamina hunger thirst}.map do |attr|
+				val = "%6s" % ("%6.2f" % self.send( attr.to_sym ))
 				"%12s = %s" % [attr.capitalize, val]
 			end
-				
 		end
+
 		def status_old
 			["strength","constitution","dexterity","intelligence",
 				"wisdom","charisma","energy","experience"].map do |attr|
@@ -130,32 +150,124 @@ module Adventure
 			end
 		end
 		
-		# Adjust is a convenience method. Given a notation like "str-0.1" convert to
-		# strength=strength-1 and update the player. Other effects on the player can
-		# also be performed, like "die" will kill the player. 
-		def adjust( text )
-			text.split(";").each do |eff|
-				if eff =~ /(exp|ene|sta|hun|ths|experience|energy|stamina|hunger|thirst)([+-])([0-9.]+)/
-					at, op, ch = $~[1], $~[2], $~[3].to_i
+		def sleep( text, timer )
+			unless @next_sleep.nil? || (@next_sleep.hrs < timer.hrs )
+				return false
+			end
+			sleep = 8.hrs
+			y = false
+			over = Die.roll(3)
+			under = Die.roll(6)
+			x = Die.roll(20)
+			if x < 3 then sleep -= under.hrs end
+			if x > 18 then sleep += over.hrs end
+			@sleep.each_pair do |key,val|
+				x = sleep.to_i.to_s + key + ".hrs.to_i"
+				begin
+					y = eval(x)
+				rescue
+				end
+				if y 
+					self.adjust( nil, val )
+					break
+				end
+			end
+			@next_sleep = timer + sleep + 12.hrs
+			return sleep
+		end
+		
+		# Adjust player stati via text notation: <stat><op><value>
+		# Multiple adjustments are separated by semicolons (;)
+		# stat = exp, ene, sta, hun, ths
+		# you can also send the full stat name:
+		# experience, energy, stamina, hunger, and thirst
+		# 
+		# <stat>+<value>                     Adds <value> to <stat>
+		# <stat>-<value>                     Subtracts <value> from <stat>
+		# <stat>= < > <= >= <> <value>       Compare <stat> to <value>, stop processing if true
+		# <stat>^<value>                     Set stat to value
+		#                                    
+		# hrs+10 or hours+10 or h+10         Adds hours on to the game timer
+		# mins+10 or minutes+10 or m+10      Adds minutes on to the game timer
+		# secs+10 or seconds+10 or s+10      Adds seconds on to the game timer
+		# die                                kills the player
+		# 
+		# 
+		# 
+		# results are in an array. 
+		# = 0   means not executed
+		# = 1   means successful
+		# = -1  error
+		# = -2  syntax error
+		# requires a self reference from the Game object to adjust the game timer
+		# If the call comes from the player (such as in #sleep) then the <object>
+		# parameter is set to <nil> and the time adjustment primatives are not available.
+		# 
+		def adjust( object, text )
+			text = text.split(";")
+			results = [0]*text.length
+			ctr = -1
+			text.each do |eff|
+				ctr += 1
+				if eff =~ $STATS + /([+-])([0-9.]+)/               # Adjust stat up/down
+					at, op, ch = $~[1], $~[2], $~[3].to_f
 					if op == "-" then ch = 0 - ch end
-					call = {:exp=>:experience,:ene=>:energy,:sta=>:stamina,
-						:hun=>:hunger,:ths=>:thirst}[at.to_sym]
-					call = at.to_sym if call.nil?
+					call = $stat_translate[at.to_sym] || at.to_sym
 					# Symbol#+ is defined in gutils.rb
 					begin
-						$SYMBOL_SEP = ''
 						self.send( call + "=", self.send( call ) + ch )
 					rescue Exception => e
 						Game.inform("There was a problem with the 'effect' code:")
 						Game.inform( eff )
 						Game.inform( e.class.name + ": " + e.message )
-					ensure
-						$SYMBOL_SEP = '_'
+						results[ctr] = -1
+					else
+						results[ctr] = 1
 					end
+				elsif eff =~ $STATS + /(=|<|>|<=|>=|<>)([0-9.]+)/  # Stop if stat compare is true
+					at, op, ch = $~[1], $~[2], $~[3]
+					if op == "<>" then op = "!=" elsif op == "="  then op = "==" end
+					call = $stat_translate[at.to_sym] || at.to_sym
+					val = (self.send( call )).to_s + op + ch
+					begin
+						val = eval(val)
+					rescue Exception => e
+						Game.inform("There was a problem with the 'effect' code:")
+						Game.inform( eff )
+						Game.inform( e.class.name + ": " + e.message )
+						results[ctr] = -1
+					else
+						results[ctr] = 1
+					end
+					if val == true then break end
+				elsif eff =~ $STATS + /(\^)([0-9.]+)/              # Set stat absolute
+					at, op, ch = $~[1], $~[2], $~[3].to_f
+					call = $stat_translate[at.to_sym] || at.to_sym
+					# op = '^'
+					self.send( call + "=", ch.to_f )
+					results[ctr] = 1
+				elsif eff =~ /^(h[+]|hrs[+]|hours[+])([0-9.]+)/ && not(object.nil?) 
+					# 																							Adjust time (hours)
+					adj = $~[2]
+					object.timer.hours = adj.to_i
+					results[ctr] = 1
+				elsif eff =~ /^(m[+]|mins[+]|minutes[+])([0-9.]+)/ && not(object.nil?)  
+					# 																							Adjust time (minutes)
+					adj = $~[2]
+					object.timer.minutes = adj.to_i
+					results[ctr] = 1
+				elsif eff =~ /^(s[+]|secs[+]|seconds[+])([0-9.]+)/ && not(object.nil?) 
+					# 																							Adjust time (seconds)
+					adj = $~[2]
+					object.timer.seconds = adj.to_i
+					results[ctr] = 1
 				elsif eff == "die"
 					kill_player()
+				else
+					results[ctr] = -2
 				end
 			end
+			return results
 		end
 		
 		def adjust_old( text )
@@ -177,52 +289,60 @@ module Adventure
 			end
 		end
 		
-		
-		def strength(); return @str; end
-		def constitution(); return @con; end
-		def dexterity(); return @dex; end
-		def intelligence(); return @int; end
-		def wisdom(); return @wis; end
-		def charisma(); return @cha; end
-		def all_attr(); return [@str, @con, @dex, @int, @wis, @cha]; end
-		def strength=(val)
-			val=[val,MAX[:str]].min
-			@str=val
-			case @str.to_f / MAX[:str] * 100
-				when 0...20 then notify( :"strength<20%", self )
-				when 20...50 then notify( :"srength<50%", self )
-			end
-		end
-		def constitution=(val); val=[val,MAX[:con]].min; @con=val; end
-		def dexterity=(val); val=[val,MAX[:dex]].min; @dex=val; end
-		def intelligence=(val); val=[val,MAX[:int]].min; @int=val; end
-		def wisdom=(val); val=[val,MAX[:wis]].min; @wis=val; end
-		def charisma=(val); val=[val,MAX[:cha]].min; @cha=val; end
-		def all_attr=(val); @str, @con, @dex, @int, @wis, @cha = val; end
 		def energy(); return @energy; end
 		def energy=(val)
-			if val > 100 then val=100 end
-			if val < 0 then val = 0 end
-			@energy=val
-			case @energy
-				when 0 then nil
-				when 1...10 then notify( :"energy<10", self )
-				when 10...20 then notify( :"energy<20", self )
-				when 20...50 then notify( :"energy<50", self )
+			if val > 100 
+				val=100
+			elsif val < 0
+				val = 0
 			end
+			@energy=val
 		end
-		
-=begin
-	GPlayer events
-		:death
-		:energy<50
-		:energy<20
-		:energy<10
-		:strength<50%
-		:strength<20%
 
-=end
-		
+		def stamina(); return @stamina; end
+		def stamina=(val)
+			val = val.to_f
+			if val > 100 
+				val=100
+			elsif val < 0
+				val = 0
+			end
+			@stamina=val
+		end
+
+		def experience(); return @experience; end
+		def experience=(val)
+			val = val.to_f
+			if val > 100 
+				val=100
+			elsif val < 0
+				val = 0
+			end
+			@experience=val
+		end
+
+		def hunger(); return @hunger; end
+		def hunger=(val)
+			val = val.to_f
+			if val > 100 
+				val=100
+			elsif val < 0
+				val = 0
+			end
+			@hunger=val
+		end
+
+		def thirst(); return @thirst; end
+		def thirst=(val)
+			val = val.to_f
+			if val > 100 
+				val=100
+			elsif val < 0
+				val = 0
+			end
+			@thirst=val
+		end
+	
 	end # GPlayer class
 	
 	# Currently, the primary use of the GPath class is as a means to implement the 

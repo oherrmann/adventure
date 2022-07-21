@@ -72,12 +72,11 @@ module Adventure
 		def initialize( id, door_list = [], description = "a key", attr = {} )
 			super("key", description, attr)
 			@id = id.to_i
-			door_list.map! {|door| door.to_i }
-			@doors = door_list
+			@doors = door_list.map {|door| door.to_i }
 		end
 		
 		attr_reader :id
-		attr_accessor :door_list
+		attr_accessor :doors
 		
 		def unlock_door( door )
 			if @doors.include?(door.id)  && door.state == "Locked" && self.try() && door.try()

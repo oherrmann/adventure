@@ -1,54 +1,66 @@
 # game.rb
 # 
+# $LOAD_PATH.unshift((`cd`).gsub("\\","/").chomp)
+# 
 # This is the Ruby Caves Adventure Game. 
 # This version uses XML game description files.
+require 'stringio'
+require 'securerandom'
 require './ditxml'
 require './game_grammar'
 require './gameobjects'
 require './game_container'
-require './game_weapons.rb'
-require './game_accidents.rb'
+require './game_weapons'
+require './game_accidents'
 require './gameplayer'
 require './gutils'
 require './gamemonster'
 require './gtime'
 require './gamedirs'
 require './gamedoors'
-# This line required for jruby, apparently
-require 'date'
+require './game_food'
+require './game_loadsave'
+
+# TODO: when 'taking' food, if you already have that food, it should add it to the same
+# food object. When food is 'dropped' onto the floor, it is lost. This goes for water as well.
+# TODO: You cannot have more than 10 units of food and 10 units of water in your inventory.
+# TODO: during a fight or a fall, your canteen may break. If that happens you will lose
+# all of your water, and you will have to find a new canteen to carry more. 
+# TODO: In a fight or accident, you may also lose food. 
+# TODO: If you eat when you are not hungry or drink when you are not thirsty, you will experience
+# negative effects. 
 
 module Adventure
 	$version = "0.1.0"
 	$understand = "I do not understand what you mean."
-	ACC_TYPE = 0
-	ACC_ROLL = 1
-	ACC_EFFECT = 2
-	ACC_FROM = 3
-	ACC_TEXT = 4
 
 	class Game
 		def initialize( gamefile )
 			srand
+			@timer = GTime.new
+			@mode = 0
 			@gamefile = gamefile if File.exists?( gamefile )
 			@id,@config = Game.get_game_config()
 			@id = "%0.10d" % @id
-			@rooms = {}
-			@doors = {}
 			@location = ""
 			@last_location = ""
 			@game_location = ""
-			@last_text = []
-			@last_vars = {}
+			@players = []             # persistent
+			@object_file = {}         # persistent
+			@doors = {}               # persistent
+			@food={}                  # persistent
+			@monsters = []            # persistent
+			@rooms = {}               # transient
+			@last_text = []           # transient; -- stored in @rooms
+			@last_vars = {}           # transient; -- stored in @rooms
+			@room_exits = {}          # transient; -- stored in @rooms
+			@room_path = []           # transient; sort of an index for @rooms
 			@@messages = []
-			@players = []
-			@room_path = []
-			@object_file = {}
-			@timer = GTime.new
-			@monsters = []
-			@room_exits = {}
+			@moves = 0
 		end
 		
-		attr_accessor :location, :last_location, :doors
+		attr_accessor :location, :last_location, :doors, :timer
+		attr_reader :mode
 		
 		# Loads the configuration file and sets the game id.
 		def Game.get_game_config()
@@ -95,9 +107,9 @@ module Adventure
 		
 		# Displays info to the user terminal.
 		def Game.inform( text = "" )
-			if text.class == Array
+			if Array === text
 				@@messages += text
-			elsif text.class == String
+			elsif String === text
 				@@messages << text
 			end
 		end
@@ -113,8 +125,6 @@ module Adventure
 		end
 		
 		def game_intro( room = "Intro" )
-			Game.inform( "Welcome to Ruby Caves Adventure Game." )
-			Game.inform( "Version " + $version )
 			loc = IntroductionListener.new
 			Game.inform( loc.do( @gamefile ) ) if room == "Intro"
 		end
@@ -138,10 +148,108 @@ module Adventure
 		def get_room( name )
 			@last_text, @last_vars, @room_exits = @rooms[ name.to_sym ]
 		end
+
+		def room_exists?( name )
+			return true if room_in_mem?( name )
+			loc = LocationListener.new( name )
+			return loc.do( @gamefile )
+		end
 		
+		# Uploads the room from the game definition file. Returns true if the room
+		# is loaded, else returns false if the room is not found.
+		def upload_room( name, reset = false )
+			loc = LocationListener.new( name )
+			if loc.do( @gamefile )
+				@last_text = loc.description
+				@last_vars = loc.vars
+				@room_exits = loc.exits
+				# Only set door info if we haven't already read it, or if we are resetting.
+				doors = loc.doors()
+				doors.each do |door|
+					if reset
+						@doors[ door.id ] = door
+					else
+						@doors[ door.id ] ||= door
+					end
+				end
+				# Only set food info if we haven't already read it, or if we are resetting.
+				# Only set it up if there is actually food in the room. 
+				unless @food.key?(@game_location) && not( reset )
+					if loc.food.length > 0
+						@food[ @game_location ] = Room.new("room food","food in room " + name )
+						loc.food.each do |nom|
+							@food[ @game_location ].add( nom )
+						end
+					end
+				end
+				# Create object file if it does not exist. Load objects.
+				unless @object_file.key?(@game_location) && not( reset )
+					@object_file[ @game_location ] = Room.new("room","objects in room " + name )
+					array = @last_vars["object"]
+					objects = []
+					if array
+						# Each element of the array 'array', 'ele', should be a Hash of an 
+						# object's attributes.
+						array.each do |ele|
+							obj_name = ele["name"]
+							obj_desc = ele["description"]
+							obj_id = ele["id"]
+							object = nil
+							case obj_name
+							when "key"
+								object = GKey.new(obj_id,[],obj_description)
+								doors = ele["door_list"].split(",")
+								object.door_list = doors.map {|door| door.to_i }
+								object.seen = ele["seen"]=="true" || false
+								object.hidden = ele["hidden"]=="true" || false
+								object.moveable = ele["moveable"]=="true" || true
+								["id","name","description","door_list","seen","hidden","moveable"].each {|v| ele.delete(v) }
+								object.mass_set_attr( ele )
+							when "sword", "club", "knife", "axe", "spear"
+								object = GWeapon.new( obj_id, obj_name, obj_desc )
+								object.seen = ele["seen"]=="true" || false
+								object.hidden = ele["hidden"]=="true" || false
+								object.moveable = ele["moveable"]=="true" || true
+								object.effect = ele["effect"] || ""
+								object.hidden_text = ele["hidden_text"] || ""
+								["id","name","description","seen","hidden","moveable",
+									"effect","hidden_text"].each {|v| ele.delete(v) }
+								object.mass_set_attr( ele )
+							when "gun", "rifle", "machinegun", "flamethrower"
+								# TODO: Not yet implemented: GRangeWeapon
+							else
+								object = GObject.new( obj_id, obj_desc )
+								object.seen = ele["seen"]=="true" || false
+								object.hidden = ele["hidden"]=="true" || false
+								object.moveable = ele["moveable"]=="true" || true
+								["id","name","description","seen","hidden","moveable"].each {|v| ele.delete(v) }
+								object.mass_set_attr( ele )
+							end
+							objects << object
+						end
+						@object_file[ @game_location ].add( objects )
+					end
+				end
+				# We don't need the objects in the room file.
+				@last_vars.delete("object")
+				save_room( @game_location, @last_text, @last_vars, @room_exits )
+				return true
+			else
+				return false
+			end
+		end
+
 		# Return the container object for the objects in the room.
 		def object_file( name )
 			return @object_file[ @gamefile + "/" + name ].contents
+		end
+		
+		# Return the container object for the food in the room
+		def food_file( name )
+			if @food[ @gamefile + "/" + name ]
+				return @food[ @gamefile + "/" + name ].contents
+			end
+			return nil
 		end
 		
 		# TODO: New doorway code needs to be implemented
@@ -173,81 +281,7 @@ module Adventure
 			#return @doors[ door ].key
 			raise "Deprecated method: door_key( door ) called!"
 		end
-		
-		# Uploads the room from the game definition file. Returns true if the room
-		# is loaded, else returns false if the room is not found.
-		def upload_room( name, reset = false )
-			loc = LocationListener.new( name )
-			if loc.do( @gamefile )
-				@last_text = loc.description
-				@last_vars = loc.vars
-				@room_exits = loc.exits
-				# Only set door info if we haven't already read it, or if we are resetting.
-				doors = loc.doors()
-				doors.each do |door|
-					if reset
-						@doors[ door.id ] = door
-					else
-						@doors[ door.id ] ||= door
-					end
-				end
-				# Create object file if it does not exist. Load objects.
-				unless @object_file[ @game_location ] && not( reset )
-					room = Room.new("room","room " + name )
-					@object_file[ @game_location ] = room
-					array = @last_vars["object"]
-					objects = []
-					if array
-						# Each element of the array 'array', 'ele', should be a Hash of an 
-						# object's attributes.
-						array.each do |ele|
-							# TODO: Objects should be created into their actual objects, ie, keys to 
-							# GKey's, swords to GWeapons, etc.
-							obj_name = ele["name"]
-							obj_desc = ele["description"]
-							obj_id = ele["id"]
-							object = nil
-							case obj_name
-								when "key"
-									object = GKey.new(obj_id,[],obj_description)
-									doors = ele["door_list"].split(",")
-									object.door_list = doors.map {|door| door.to_i }
-									object.seen = ele["seen"]=="true" || false
-									object.hidden = ele["hidden"]=="true" || false
-									object.moveable = ele["moveable"]=="true" || true
-									["id","name","description","door_list","seen","hidden","moveable"].each {|v| ele.delete(v) }
-									object.mass_set_attr( ele )
-								when "sword", "club", "knife", "axe", "spear"
-									object = GWeapon.new( obj_id, obj_name, obj_desc )
-									object.seen = ele["seen"]=="true" || false
-									object.hidden = ele["hidden"]=="true" || false
-									object.moveable = ele["moveable"]=="true" || true
-									["id","name","description","seen","hidden","moveable"].each {|v| ele.delete(v) }
-									object.mass_set_attr( ele )
-								when "gun", "rifle", "machinegun", "flamethrower"
-									# TODO: Not yet implemented
-								else
-									object = GObject.new( obj_id, obj_desc )
-									object.seen = ele["seen"]=="true" || false
-									object.hidden = ele["hidden"]=="true" || false
-									object.moveable = ele["moveable"]=="true" || true
-									["id","name","description","seen","hidden","moveable"].each {|v| ele.delete(v) }
-									object.mass_set_attr( ele )
-							end
-							objects << object
-						end
-						@object_file[ @game_location ].add( objects )
-					end
-				end
-				# We don't need the objects in the room file.
-				@last_vars.delete("object")
-				save_room( @game_location, @last_text, @last_vars, @room_exits )
-				return true
-			else
-				return false
-			end
-		end
-		
+				
 		def set_location( location )
 			@location = location
 			@game_location = @gamefile+"/"+location
@@ -268,16 +302,19 @@ module Adventure
 		def play( name="Gwen", mode = 0, room = @config["main/start.room"] )
 			#break unless @gamefile
 			@mode = mode
+			room ||= "Intro"
 			@playing = true
 			#log( Adventure::ts(@config["main/date.format"]) + " - Game started." )
 			@players[0] = GPlayer.new( name )
 			@players[0].subscribe( :death ) {|p| @playing = false }
-			# @players[0].take( GObject.new("torch","a torch") )
-			torch = GObject.new("torch","a torch")
-			torch.seen = true
-			@players[0].hands.add( torch )
-			o2 = GKey.new(24,[24],"a key")
-			@players[0].take o2
+			obj = GObject.new("torch","a torch")
+			obj.seen = true
+			@players[0].hands.add( obj )
+			obj = GObject.new("canteen","a canteen")
+			obj.seen = true
+			@players[0].take( obj )
+			obj = GKey.new(24,[24],"a key")
+			@players[0].take( obj )
 			@rooms = {}
 			@last_text = []
 			@last_vars = {}
@@ -294,6 +331,9 @@ module Adventure
 			end
 			update() if @@messages.size > 0
 			#log( Adventure::ts(@config["main/date.format"]) + " - Game ended." )
+		rescue Exception => error
+			error_message( "Error!", error )
+			@playing = false
 		end
 		
 		def clear_messages
@@ -328,15 +368,11 @@ module Adventure
 				upload_room( @location )
 			end
 			@players[0].in_room( @location )
-			if @mode == 1
-				Game.inform( "You are in room " + @location )
+			if not( been_to )
 				Game.inform( @last_text )
-			else
-				if ! been_to
-					Game.inform( @last_text )
-				elsif @last_location != @location
-					Game.inform( @last_text[0] )
-				end
+				Game.inform( hidden_clues( @location ) )
+			elsif @last_location != @location
+				Game.inform( @last_text[0] )
 			end
 			@players[0].last_location = @players[0].location
 			check_for_accident() if ( @last_location != @location )
@@ -360,26 +396,25 @@ module Adventure
 		# Prompts for user input. May be timed. (timer not implemented)
 		def prompt( time = 0 )
 			return nil if @playing == false
-			print "\n> "
-			t1 = DateTime.now
+			print "\nRCA> "
+			t1 = Time.now
 			@original = gets.chomp
 			# Update the timer... add up to 10 minutes for slow entries. 
-			t2 = DateTime.now
+			t2 = Time.now
 			t3 = GTime.new
-			t3.hms = Date.day_fraction_to_time( t2 - t1 )
-			case t3.to_i/60
-				when 0..10
-					@timer.minutes=t3.to_i/60
-				else
+			t3.dhms = GTime.day_fraction_to_time( t2 - t1 )
+			#puts t3.dhms.inspect
+			case t3.to_i
+			when 0..600
+					@timer.seconds=t3.to_i
+			else
 					@timer.minutes=10
 			end
-			@original, @adjectives, @keywords = Adventure::adjust_english( @original )
-			#puts "adjectives = " + @adjectives.pretty
-			input = @original.downcase
+			input, @adjectives, @keywords = Adventure::adjust_english( @original.downcase )
 			case input[input.size-1,1]
 				when "?"
 					@punct = "?"
-					input = input.delete "?"
+					input.delete! "?"
 				when "."
 					@punct = "."
 					input = input[0,input.size-1]
@@ -391,21 +426,28 @@ module Adventure
 			return input
 		end
 		
-		# Interprets the user input.
+		# Interprets the user input. check 
 		def interpret( value = "noop" )
 			return nil if @playing == false
-			#puts "value = " + value.to_s # TESTING
-			value = value.split(" ")
+			value = value.split(" ")                  # 'value' is an array from here on
 			command = value.shift
-			if Adventure::is_direction?( command )
+			if Adventure::is_direction?( command )    # 'command' is 'north', 'south', etc
 				value.unshift( command )
 				command = "go"
-			elsif Adventure::to_direction( command )
+			elsif Adventure::to_direction( command )	# 'command' is 'n', 's', etc
 				value.unshift( Adventure::to_direction( command ) )
 				command = "go"
-			elsif command == "back"
-				value.unshift( command )
+			elsif command == "back"                   # 'command' is 'back'
+				value.unshift( "back" )
 				command = "go"
+			elsif command == "stats" || command == "status"
+				value = ["status"]
+				command = "check"
+			elsif value.include?("stats")
+				value.map! {|ele| ele=="stats" ? "status" : ele }
+			elsif ["inventory","inv"].include?(command)
+				value = ["inv"]
+				command = "check"
 			end
 			@last_command = command
 			if command.length > 0
@@ -414,7 +456,8 @@ module Adventure
 				case command
 					when "noop"
 						@timer += 1.mins
-					when "quit","exit","bye" then @playing = false
+					when "info" then about_the_game( value )
+					when "bye" then @playing = false
 					when "where" then where_am_i( value )
 					when "check" then query_object( value )
 					when "inspect" then int_inspect( @original.split(" ")[1..-1] )
@@ -424,18 +467,40 @@ module Adventure
 					when "take" then take_item( value )
 					when "drop" then drop_item( value )
 					when "hold" then take_hold( value )
-					when "unhold" then un_hold( value )
+					when "replace" then replace( value )
+					when "sleep" then sleep( value )
 					when "consume" then consume( value )
 					when "goto" then goto_room( @original.split(" ")[1..-1] )
 					when "pinfo" then programmer_info( value )
 					when "reload" then reload_room( @original.split(" ")[1..-1], false )
 					when "reset" then reload_room( @original.split(" ")[1..-1], true )
+					when "save" then save_game_file( @original.split(" ")[1..-1].join(" ") )
+					when "load" then load_game_file( @original.split(" ")[1..-1].join(" ") )
 					else
 						Game.inform( dont_understand() )
 				end
 			end
 		end
 		
+		# This method checks for hidden objects in the room, and if there are
+		# any, and they have clues, it adds them to the messages for the player.
+		# Called in update(), where_am_i(), and look_to
+		def hidden_clues( name )
+			return object_file( name ).select {|obj| obj.hidden == true && 
+				obj.respond_to?(:hidden_text) && obj.hidden_text.length > 0}.map {|obj| 
+					obj.hidden_text }
+		end
+		
+		def about_the_game( text )
+			if text == []
+				puts "--------------------------------------------"
+				puts "Ruby Caves Adventure Game"
+				puts "Version " + $version
+				puts "(c)2011, 2022 by KittySoft Solutions"
+				puts "Programmer Gwen Morgan"
+				puts "--------------------------------------------"
+			end
+		end
 		# The other_turns method services other 'players' in the game, such as monsters.
 		def other_turns()
 			@monsters.each do |monster|
@@ -445,26 +510,54 @@ module Adventure
 		
 		def where_am_i( text )
 			Game.inform( @last_text )
+			Game.inform( hidden_clues( @location ) )
 		end
 		
 		def programmer_info( text )
 			puts "location = " + @game_location
-			puts "time = " + @timer.out()
+			puts "    time = " + @timer.out()
+			puts "      id = " + @id
 		end
 		
 		# The take command attempts to pick up objects in a room.
 		def take_item( text )
-			objects = @object_file[ @gamefile + "/" + @location ]
-			@object_file[ @gamefile + "/" + @location ].take_from( text[0], @players[0].inventory )
+			# Quantity is generally just for food for now
+			qty, text = first_word_qty( text )
+			success = [false, ""]
+			if @object_file[ @game_location ].contains?( text[0] ) > 0
+				success = @object_file[ @game_location ].take_from( text[0], qty, @players[0].inventory )
+			elsif @food[ @game_location ].not_nil? && @food[ @game_location ].contains?( text[0] ) > 0
+				success = @food[ @game_location ].take_from( text[0], qty, @players[0].inventory )
+			else
+				Game.inform( "That item cannot be found here. " )
+				return
+			end
+			Game.inform( success[1] )
 		end
 		
 		# The drop command attempts to discard objects in a room.
 		def drop_item( text )
+			qty, text = first_word_qty( text )
+			success = [false, ""]
 			if @players[0].hands.contains?( text[0] ) > 0
-				@players[0].hands.take_from( text[0], @object_file[ @gamefile + "/" + @location ] )
+				success = @players[0].hands.take_from( text[0], qty, @object_file[ @gamefile + "/" + @location ] )
+				Game.inform( success[1] )
 			else
-				@players[0].inventory.take_from( text[0], @object_file[ @gamefile + "/" + @location ] )
+				success = @players[0].inventory.take_from( text[0], qty, @object_file[ @gamefile + "/" + @location ] )
+				Game.inform( success[1] )
 			end
+		end
+		
+		def first_word_qty( text )
+			qty = 1
+			if text[0] =~ /[0-9]+/
+				qty = text[0].to_i
+				text.shift
+			elsif $cardinal_numbers.key?( text[0].to_sym )
+				qty = $cardinal_numbers[ text[0].to_sym ]
+				text.shift
+			end
+			return qty, text
 		end
 		
 		# The take_hold method allows the player to take something out of their inventory
@@ -472,9 +565,10 @@ module Adventure
 		# If no item matches the request, then the item that was placed in inventory is  moved
 		# back to the hands. 
 		def take_hold( text )
-			un_hold()
-			@players[0].inventory.take_from( text[0], @players[0].hands )
-			if @players[0].hands.size == 0 && @players[0].last_handled
+			replace()
+			success = @players[0].inventory.take_from( text[0], 1, @players[0].hands )
+			Game.inform( success[1] )
+			if success[0] == false && not( @players[0].last_handled.nil? )
 				@players[0].inventory.drop( @players[0].last_handled )
 				@players[0].hands.add( @players[0].last_handled )
 				@players[0].last_handled = nil
@@ -483,31 +577,47 @@ module Adventure
 		
 		# Player can only hold 1 item in hands, so this returns it to inventory if the 
 		# player wishes to have hands free.
-		def un_hold( text = [] )
+		def replace( text = [] )
 			@players[0].hands.each do |obj|
 				@players[0].last_handled = obj
 				@players[0].hands.drop( obj )
 				@players[0].inventory.add( obj )
-				if @last_command == "unhold"
+				if @last_command == "replace"
 					Game.inform( obj.description.to_s + " was replaced in inventory. ")
 				end
 			end
 		end
 		
+		def sleep( text )
+			sleep = @players[0].sleep( text, @timer )
+			#puts sleep.pretty
+			if sleep
+				@timer += sleep
+				Game.inform("You slept " + sleep.hrs.to_s + " hours. ")
+				Game.inform("You may sleep again after " + @players[0].next_sleep.out + ". ")
+			else
+				Game.inform("Too early to sleep. You may sleep again after ")
+				Game.inform(@players[0].next_sleep.out + ". ")
+			end
+		end
+		
 		# Attempts to move the player in a direction
 		def move( text )
+			# TODO: If there is only one exit out of a room, 'out' should 
+			# be able to work for that exit. 
 			direction = text.shift()
 			counter = 0
 			back = false
 			back_direction = []
 			exits = count_exits( direction )
-			if exits == 0 && direction != 'back'
+			if exits == 0 && ( direction != 'back' && direction != 'out' ) 
 				Game.inform("There are no exits in that direction.")
+				@timer += 1.mins
 				return
 			elsif @room_exits[ [direction, counter ] ] && text.length == 0
 				# example: > go north
 				# do nothing... we are on-track
-			elsif direction == 'back'
+			elsif direction == 'back' || direction == 'out'
 				# example: > back
 				back = true
 				direction = @players[0].go_back?().to_s
@@ -520,6 +630,7 @@ module Adventure
 				direction, counter = back_direction
 			elsif exits > 1 && text.length == 0
 				Game.inform("You need to specify which exit to take.")
+				@timer += 1.mins
 				return
 			elsif text[0] =~ /^[0-9]+$/
 				# example: > go north 1
@@ -545,6 +656,7 @@ module Adventure
 				counter = $cardinal_numbers[text[0].to_sym]
 			else
 				Game.inform( dont_understand )
+				@timer += 2.mins
 				return
 			end
 			direction = [direction, counter]
@@ -578,9 +690,10 @@ module Adventure
 						set_gamefile( loc.file )
 					end
 					set_location( loc.destination )
-					Game.inform( loc.text ) if loc.text.length > 0
+					@moves += 1
+					unless loc.text.empty? then Game.inform( loc.text ) end
 					@players[0].go( direction[0], loc.destination, counter, back )
-					@players[0].adjust( loc.effect ) if loc.effect.length > 0
+					unless loc.effect.empty? then @players[0].adjust( self, loc.effect ) end
 					#@playing = false if @players[0].alive? == false
 					if loc.type == "extends"
 						@timer += 30.secs
@@ -593,65 +706,10 @@ module Adventure
 				end
 			else
 				Game.inform( dont_understand() )
+				@timer += 2.mins
 			end
-			@players[0].adjust( "ene-0.5" )
+			@players[0].adjust( self, "ene-1" )
 		end
-
-		# Attempts to move the player in a direction
-		def old_move( text )
-			direction = text[0]
-			# adjust for 'back' command
-			back = false
-			if direction == "back"
-				direction = @players[0].go_back?().to_s
-				back = true
-			end
-			# check if there is a door
-			if @last_vars[ direction ] && @last_vars[ direction ][LOC_TYPE] == GO_DOORWAY
-				door = @last_vars[ direction ][LOC_DOOR]
-				key = @players[0].inventory.contains?("key",{"key"=>door_key( door )})
-				if door_locked?( door ) && key < 1
-					Game.inform( "The door is locked." )
-					direction = "locked" # Setting the direction to 'locked' disables the move.
-					@timer += 2.mins
-				elsif door_locked?( door ) && key > 0
-					door_unlock( door, door_key( door ) )
-					Game.inform( "The door is locked but you have the key, and unlock it.")
-					@timer += 1.mins
-				elsif door_unlocked?( door )
-					Game.inform( "The door is unlocked so you are able to pass through." )
-					@timer += 30.secs
-				end
-			end
-			# Try to go in the direction requested.
-			counter = 0
-			if direction
-				if @last_vars[ direction ]
-					loc = @last_vars[ direction ]
-					@players[0].last_direction = direction
-					if loc[LOC_FILE].size > 0
-						set_gamefile( loc[LOC_FILE] )
-					end
-					set_location( loc[LOC_DEST] )
-					Game.inform( loc[LOC_TEXT] ) if loc[LOC_TEXT]
-					@players[0].go( text[0], back )
-					@players[0].adjust( loc[LOC_EFFECT] ) if loc[LOC_TYPE] == GO_DROPOFF
-					#@playing = false if @players[0].alive? == false
-					if loc[LOC_TYPE] == GO_EXTENDS
-						@timer += 30.secs
-					else
-						@timer += 1.mins
-					end
-				else
-					Game.inform( "You cannot go that way.")
-					@timer += 1.mins
-				end
-			else
-				Game.inform( dont_understand() )
-			end
-			@players[0].adjust( "ene-0.5" )
-		end
-
 		
 		# This routine checks to see if an accident should occur.
 		def check_for_accident
@@ -664,15 +722,17 @@ module Adventure
 			if accident.size > 0
 				# The accident(s) has/have occurred! 
 				accident.each do |acc|
-					Game.inform( "Warning: an accident has occured: " + acc.type )
+					Game.inform( "Warning: an accident has occurred: " + acc.type )
 					Game.inform( acc.text ) unless acc.text.empty?
-					@players[0].adjust( acc.effect )
+					@players[0].adjust( self, acc.effect )
 				end
 			end
 		end
 		
 		# ***Not yet implemented***
 		# #examine allows detailed looking at specific objects.
+		# eg; look at mushrooms in room
+		# examine sword
 		def examine( text )
 		end
 		
@@ -701,7 +761,6 @@ module Adventure
 				dirs = $directions.clone
 				while dirs.size > 0
 					dir = dirs.shift
-					#rooms << dir if ( look( [dir] )[0] == 1 && vars[dir][LOC_TYPE] == GO_DIRECTION )
 					rooms << dir if ( look( [dir] )[0] == 1 && count_exits(dir, "direction") > 0 )
 				end
 				roomss = rooms.size
@@ -716,7 +775,6 @@ module Adventure
 				dirs = $directions.clone
 				while dirs.size > 0
 					dir = dirs.shift
-					#rooms << dir if ( look( [dir] )[0] == 1 && vars[dir][LOC_TYPE] == GO_EXTENDS )
 					rooms << dir if ( look( [dir] )[0] == 1 && count_exits(dir, "extends") > 0 )
 				end
 				roomss = rooms.size
@@ -731,7 +789,6 @@ module Adventure
 				dirs = $directions.clone
 				while dirs.size > 0
 					dir = dirs.shift
-					#rooms << dir if ( look( [dir] )[0] == 1 && vars[dir][LOC_TYPE] == GO_DOORWAY )
 					rooms << dir if ( look( [dir] )[0] == 1 && count_exits(dir, "doorway") > 0 )
 				end
 				roomss = rooms.size
@@ -746,7 +803,6 @@ module Adventure
 				dirs = $directions.clone
 				while dirs.size > 0
 					dir = dirs.shift
-					#rooms << dir if ( look( [dir] )[0] == 1 && vars[dir][LOC_TYPE] == GO_DROPOFF )
 					rooms << dir if ( look( [dir] )[0] == 1 && count_exits(dir, "dropoff") > 0 )
 				end
 				roomss = rooms.size
@@ -759,10 +815,24 @@ module Adventure
 				# number of times looked around
 				@rooms[@game_location.to_sym][1][:looked] ||= 0
 				@rooms[@game_location.to_sym][1][:looked] += 1
-				if ( Die.roll(6) - 1 ) < @rooms[@game_location.to_sym][1][:looked]
-					find_hidden = true
+				# Check for food and water. 
+				if food_file( @location ).not_nil?
+					f = w = 0
+					food_file( @location ).each do |object|
+						object.seen = true
+						object.type == "water" ? w += 1 : f += 1
+					end
+					if f > 0
+						Game.inform("The following food items can be seen: ")
+						Game.inform( list_objects( food_file( @location ) ) + ".")
+					end
+					if w > 0
+						Game.inform("There is water at this location.")
+					end
 				end
-				# check for objects
+				# check for objects. Maybe find hidden objects. Non-hidden objects 
+				# should all become 'seen' after #look_to is executed.
+				find_hidden = true if ( Die.roll(6) - 1 ) < @rooms[@game_location.to_sym][1][:looked]
 				if object_file( @location ).length > 0
 					object_file( @location ).each { |object|
 						if object.hidden != true || find_hidden == true
@@ -775,7 +845,12 @@ module Adventure
 						end
 					}
 					# TODO: how to find hidden items?
-					Game.inform( "The following objects can be seen: " + list_objects( object_file( @location ) ) )
+					x = list_objects( object_file( @location ) )
+					if x.length > 0
+						Game.inform( "The following objects can be seen: ")
+						Game.inform( x )
+					end
+					Game.inform( hidden_clues( @location ) )
 				end
 			else
 			 Game.inform( look( value, true )[1] )
@@ -784,7 +859,7 @@ module Adventure
 		
 		def list_objects( list, hidden = false )
 			if list.class == Array # Assumed an array of gobjects???
-				return list.map { |e| e.description }.join( ", ")
+				return list.select { |e| e.seen }.map { |e| e.description }.join(", ")
 			elsif list.class == String
 				return list.split(",").map { |e| "a " + e }.join( ", ")
 			elsif list.class == Container
@@ -798,6 +873,10 @@ module Adventure
 		def look( text, rem = false )
 			text[0] = Adventure::to_direction( text[0] ) if Adventure::to_direction( text[0] )
 			dir = text[0] if ( text && Adventure::is_direction?( text[0] ) )
+			peeker = Adventure::PeekListener.new( @location )
+			peeker.do( @gamefile )
+			@peek = peeker.peek
+			
 			result = [-1,""]
 			if dir == "up"
 				dir_show = "above you"
@@ -812,7 +891,7 @@ module Adventure
 				# every time the player 'looked around'
 				if rem
 					# Symbol#+ is defined in gutils.rb
-					rem_looked = :looked + dir
+					rem_looked = :looked + "_" + dir
 					@rooms[@game_location.to_sym][1][rem_looked] ||= 0
 					@rooms[@game_location.to_sym][1][rem_looked] += 1
 				end
@@ -834,7 +913,7 @@ module Adventure
 					@timer += 5.secs
 					return result
 				end
-				# Check the exit types in each direction
+				# Check the exit types in this direction
 				["direction", "extends", "doorway", "dropoff"].each do |d|
 					ex << count_exits(dir, d )
 				end
@@ -863,11 +942,16 @@ module Adventure
 				if result[0] < 0 
 					result[0] = 0
 					result[1] = "There is nothing of interest to see #{dir_show}. "
+				else
+					result[1] += @peek.select {|p| p.type == "peek" && p.direction == dir &&
+						p.counter > 0 }.map {|p| [dir," ",$cards[p.counter],": ",p.text].join }.join
+					result[1] += @peek.select {|p| p.type == "peek" && p.direction == dir && 
+						p.counter == 0 }.map {|p| p.text }.join
 				end
 			else
 				result = [-1,"Look where?"]
+				@timer += 1.mins
 			end
-			@timer += 5.secs
 			return result
 		end
 		
@@ -883,7 +967,7 @@ module Adventure
 			return result
 		end
 		
-		# Attempts to describe an object; "what --- "
+		# extra information queries
 		def query_object( text )
 			if text.member? "status"
 				text = ["status"]
@@ -905,17 +989,19 @@ module Adventure
 					Game.inform( "pointer=" + @players[0].path.pointer().to_s )
 				when "objects"
 					Game.inform( @object_file.inspect )
-				when "inventory"
+				when "inv"
 					if @players[0].inventory.size + @players[0].hands.size == 0
 						Game.inform("Your inventory is empty.")
 					elsif @players[0].inventory.size == 0
 					else
-						Game.inform("Your inventory includes " + @players[0].inventory.all_items().join(", ") )
+						x = Adventure::list_to_english(@players[0].inventory.all_items() )
+						Game.inform("Your inventory includes " + x.to_s)
 					end
 					if @players[0].hands.size > 0
-						Game.inform("You are holding " + @players[0].hands.all_items().join(", ") )
+						x = Adventure::list_to_english(@players[0].hands.all_items() )
+						Game.inform("You are holding " + x.to_s )
 					end
-				when "timer"
+				when "timer", "time"
 					timer,res = @timer.dhms, []
 					if timer[0] == 1 then res << "1 day" end
 					if timer[0] > 1 then res << "%d days" % timer[0] end
@@ -934,20 +1020,71 @@ module Adventure
 		# The consume method allows the player to consume food and water in order to 
 		# regain energy and heal.
 		def consume( text )
-			
-			if text.member?( "water" )
-				@players[0].adjust( "ene+20;str+1" )
-				Game.inform( "Ahhhh! The pause that refreshes. ")
-				e = @players[0].energy()
-				Game.inform( "Your current energy level is " + e.to_s )
-			elsif text.member?( "food" )
-				@players[0].adjust( "ene+50;str+2" )
-				Game.inform( "Very tasty! ")
-				e = @players[0].energy()
-				Game.inform( "Your current energy level is " + e.to_s )
+			return if text == []
+			if ["in_inv","in_inventory"].intersect?(text)
+				manual = "inv"
+			elsif ["in_room","in_cave","in_loc","in_location"].intersect?(text)
+				manual = "room"
+			else
+				manual = "both"
+			end
+			fobj, result = look_for_food( text, manual )
+			if result.max == 0
+				Game.inform( text[0] + " cannot be found here. ")
+				return
+			end
+			if result.min > 0
+				Game.inform( text[0] + " can be found in inventory and location. ")
+				Game.inform("Please specify which to take from. ")
+				return
+			end
+			loc = result[0] > 0 ? "room" : "inv"
+			if fobj
+				effect = fobj.consume( @timer )
+				@players[0].adjust(self, effect)
+				if fobj.type == "water" && loc == "inv"
+					fobj.drain()
+				end
+				Game.inform("You have consumed some " + text[0] + "." )
+				if fobj.quantity == 0
+					Game.inform("The resource has been used up. ")
+					if fobj.grow.class <= String && fobj.grow != ""
+						Game.inform("The resource will replenish. ")
+					end
+				end
 			end
 		end
-		
+
+		# Check for food either in room or inventory
+		def look_for_food( text, location )
+			food = text[0]
+			fobj = nil
+			result = [0, 0] # Number in [room,inventory]
+			# Check room
+			if ["room","both"].include?(location)
+				food_file( @location ).each do |obj|
+					if obj.description == food && obj.check(@timer) > 0 
+						fobj = obj
+						result[0] = 1
+					end
+				end
+			end
+			# Check inventory
+			if ["inv","both"].include?(location)
+				@players[0].inventory.contents.each do |obj|
+					if obj.description == food && obj.check(@timer) > 0
+						fobj = obj
+						result[1] = 1
+					end
+				end
+				#obj = @players[0].hands.contents[0]
+				#if obj.class <= GFood && obj.description == food && obj.check > 0
+				#	result[1] = 1
+				#end
+			end
+			return fobj, result
+		end
+
 		# The int_inspect method implements the game's inspect command, which is a developer
 		# command that allows the programmer to view the internal state of the game while it
 		# is playing. The inspect command may also be abbreviated to '&'.
@@ -957,17 +1094,23 @@ module Adventure
 				begin
 					Game.inform( deval{text} )
 				rescue Exception => e
-					puts "Inspect Fail!: " + e.class.name + ": " + e.message + "\n"
-					puts "Call Backtrace:"
-					e.backtrace.each {|line| 
-						line = line.to_s 
-						puts "  " + line.to_s[line.to_s.rindex("/")...line.to_s.size] 
-					}
+					error_message( "Inspect Fail!", e )
 				end
 			else
 				Game.inform( dont_understand() )
 			end
 		end
+		
+		def error_message( message = "Error!", error )
+		  puts message + ": " + error.class.name + ": " + error.message
+		  puts "Call Backtrace:"
+		  error.backtrace.each {|line| 
+		  	line = line.to_s 
+		  	puts "  " + line.to_s[line.to_s.rindex("/")...line.to_s.size] 
+		  }
+			return 
+		end
+		
 		
 		# The goto_room method implements the game's goto command, which is a developer
 		# command that allows the programmer to jump from his current location to any
@@ -975,13 +1118,14 @@ module Adventure
 		# go to any room in the current file, or 'goto <file>/<room>' to go to any room 
 		# in the game, including those in other files. 
 		def goto_room( text )
+			return if text == [] 
 			room = text[0]
 			if @config["prog/command.goto"] == "yes"
 				if room["/"]
 					room = room.split("/")[1]
 					set_gamefile( text[0].split("/")[0] )
 				end
-				if upload_room( room )
+				if room_exists?( room )
 					@players[0].path.clear()
 					set_location( room )
 				else

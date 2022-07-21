@@ -1,6 +1,16 @@
+# 
+# game_container.rb
+# 
+# Containers model anything that can contain other objects. Inventories are containers,
+# and rooms are a subclass of container. 
+# 
 module Adventure
 
 	class Container < GObject
+	
+		# object.name, source.name, destination.name, destination.contains?(canteen)
+		WATER_RULE = ["water", "room food", "inventory", false]
+		
 		def initialize( name, description, contents = [] )
 			super( name, description )
 			@contents = contents
@@ -131,29 +141,98 @@ module Adventure
 		# it is removing an item from a room inventory and placing it in a character inventory,
 		# or removing it from a character inventory and placing it in a room inventory. The
 		# 'from' inventory is _self_, and the 'to' inventory is specified as an argument. 
-		def take_from( text, to_container )
-			#puts $GAME_ADJ.pretty
-			if self.contains?( text ) == 1 
+		# TODO: Add food to food already existing in inventory/room
+		def take_from( text, quantity, to_container )
+			canteen = to_container.contains?("canteen") > 0
+			result = [false, ""]
+			qty = self.contains?( text )
+			if qty == 1 
+				# There is only one matching item
 				obj = self.match( text )
-				self.drop( obj )
-				to_container.add( obj )
-				Adventure::Game.inform( "A " + obj.name + " has been taken from " + self.name )
-				Adventure::Game.inform(" and added to " + to_container.name + ".")
-			elsif self.contains?( text ) > 1 && $GAME_ADJ.include?('any')
+				if obj.class <= GFood
+					# Food is treated specially
+					result = handle_food( text, quantity, to_container, obj )
+				else
+					# Other objects include?
+					if self.name == "inventory" && obj.name == "canteen" && 
+							self.contains?("water") > 0 && to_container.name == "room"
+						# If we drop our canteen, we irrevocably lose all of our water
+						objs = self.match("water")
+						self.drop( objs )
+						result[1] += "You have lost all of your water. "
+					end
+					if obj.name == "canteen" && canteen && to_container.name == "inventory"
+						result[0] = false
+						result[1] += "You may only have one canteen in your inventory. "
+						return result
+					end
+					self.drop( obj )
+					to_container.add( obj )
+					if to_container.name == "inventory" then obj.hidden_text = "" end
+					result[0] = true
+					result[1] += "A " + obj.name + " has been taken from " + self.name 
+					result[1] += " and added to " + to_container.name + "."
+				end
+			elsif qty > 1 && $GAME_ADJ.include?('any')
+				# There are more than one matching item, but the player asked for 'any'
 				objs = self.match( text )
 				obj = objs[0]
-				self.drop( obj )
-				to_container.add( obj )
-				Adventure::Game.inform( "A " + obj.name + " has been taken from " + self.name )
-				Adventure::Game.inform (" and added to " + to_container.name + ".")
-			elsif self.contains?( text ) > 1
-				Adventure::Game.inform( "There is more than one item that matches your request." )
+				if obj.class <= GFood
+					# Food is treated specially
+					result = handle_food( text, quantity, to_container, obj )
+				else
+					# Other objects
+					# Note: You can only have one canteen (for now)
+					self.drop( obj )
+					to_container.add( obj )
+					if to_container.name == "inventory" then obj.hidden_text = "" end
+					result[0] = true
+					result[1] += "A " + obj.name + " has been taken from " + self.name 
+					result[1] += " and added to " + to_container.name + "."
+				end
+			elsif qty > 1
+				# There is more than one matching item.
+				result[1] += "There is more than one item that matches your request." 
 			else
-				Adventure::Game.inform( "There are no items that match your request." )
+				# There are no matching items
+				result[1] += "There are no items that match your request." 
 			end
+			return result
 		end
+
+		def handle_food( text, quantity, to_container, obj )
+			result = [false, ""]
+			canteen = to_container.contains?("canteen") > 0
+			qty_text = ""
+			obj.check( @timer )
+			qoh = obj.quantity
+			if qoh > 0
+				check = [obj.name, self.name, to_container.name, canteen]
+				if check == WATER_RULE
+					result[0] = false
+					result[1] += "Water cannot be stored in inventory unless you have a canteen. "
+				else
+					fobj = GFood.new( obj.type, [qoh, quantity].min, obj.effect, false )
+					fobj.seen = true
+					if obj.name != "water" then [qoh, quantity].min.times { obj.drain() } end
+					to_container.add( fobj )
+					result[0] = true
+					qty_text = " x " + [qoh, quantity].min.to_s
+					if obj.name == "water"
+						result[1] += "Water#{qty_text} has been taken from " + self.name
+						result[1] += " and added to " + to_container.name + ". "
+					else
+						result[1] += fobj.name + "#{qty_text} have been taken from " + self.name 
+						result[1] += " and added to " + to_container.name + ". "
+					end
+				end
+			end
+			return result
+		end
+
 		
-		def take_specific_from( text, to_container )
+		def take_specific_from( text, quantity, to_container )
+			# Not yet implemented.
 		end
 		
 		def pretty( level = 0 )

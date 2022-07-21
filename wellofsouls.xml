@@ -3,6 +3,7 @@
 <game>
 	<locations>
 		<location id="A">
+			<type value="chamber" />
 			<description>You are at the bottom of the shaft.
 			The chamber widens considerably.</description>
 			<direction dir="north" dest="B-1" text="" />
@@ -13,34 +14,40 @@
 			<direction dir="up" dest="AW1" text="You climb up the wall." />
 		</location>
 		<location id="AW1">
+			<type value="shaft" />
 			<description>You are in a slippery tube with narrow holds.
 			You are about ten feet above the floor of the chamber below.</description>
 			<direction dir="up" dest="AW2" text="You climb up the wall." />
 			<direction dir="down" dest="A" text="" />
 		</location>
 		<location id="AW2">
+			<type value="shaft" />
 			<description>You are in a slippery tube with narrow holds.
 			You are about thirty feet from the chamber above.</description>
 			<direction dir="up" dest="AW3" text="You climb up the wall." />
 			<direction dir="down" dest="AW1" text="" />
 		</location>
 		<location id="AW3">
+			<type value="shaft" />
 			<description>You are in a slippery tube with narrow holds.
 			You are about twenty feet from the chamber above.</description>
 			<direction dir="up" dest="AW4" text="You climb up the wall. You are almost at the top." />
 			<direction dir="down" dest="AW2" text="" />
 		</location>
 		<location id="AW4">
+			<type value="shaft" />
 			<description>You are in a slippery tube with narrow holds.
 			You are about ten feet from the chamber above.</description>
 			<direction dir="up" dest="RG" text="You emerge into a shallow alcove in the cavern above." file="lostcave.xml" />
 			<direction dir="down" dest="AW3" text="" />
 		</location>
 		<location id="A-1">
+			<type value="chamber" />
 			<description>You are in a small alcove off of the Well of Souls shaft.</description>
 			<direction dir="northwest" dest="A" text="" />
 		</location>
 		<location id="A-2">
+			<type value="chamber" />
 			<description>You are in the front entrance to the Well of Souls temple complex.
 			To your north is the Well shaft. To the south is the exterior of the temple.
 			You hear running water outside.</description>
@@ -49,6 +56,7 @@
 		</location>
 
 		<location id="B-1">
+			<type value="chamber" />
 			<description>You are in a long well-lit gallery extending north and south.</description>
 			<direction dir="south" dest="A" text="" />
 			<extends dir="north" dest="B-3" text="" />
@@ -56,12 +64,14 @@
 			<extends dir="northeast" dest="B-4" text="" />
 		</location>
 		<location id="B-2">
+			<type value="chamber" />
 			<description>You are in a long well-lit gallery extending north and south.</description>
 			<extends dir="west" dest="B-1" text="" />
 			<extends dir="northwest" dest="B-3" text="" />
 			<extends dir="north" dest="B-4" text="" />
 		</location>
 		<location id="B-3">
+			<type value="chamber" />
 			<description>You are in a long well-lit gallery extending north and south.</description>
 			<extends dir="south" dest="B-1" text="" />
 			<extends dir="north" dest="B-5" text="" />
@@ -70,6 +80,7 @@
 			<extends dir="northeast" dest="B-6" text="" />
 		</location>
 		<location id="B-4">
+			<type value="chamber" />
 			<description>You are in a long well-lit gallery extending north and south.</description>
 			<extends dir="south" dest="B-2" text="" />
 			<extends dir="southwest" dest="B-1" text="" />
@@ -78,6 +89,7 @@
 			<extends dir="north" dest="B-6" text="" />
 		</location>
 		<location id="B-5">
+			<type value="chamber" />
 			<description>You are in a long well-lit gallery extending north and south.</description>
 			<extends dir="south" dest="B-3" text="" />
 			<extends dir="north" dest="B-7" text="" />
@@ -86,6 +98,7 @@
 			<extends dir="northeast" dest="B-8" text="" />
 		</location>
 		<location id="B-6">
+			<type value="chamber" />
 			<description>You are in a long well-lit gallery extending north and south.</description>
 			<extends dir="south" dest="B-4" text="" />
 			<extends dir="southwest" dest="B-3" text="" />
@@ -94,6 +107,7 @@
 			<extends dir="north" dest="B-8" text="" />
 		</location>
 		<location id="B-7">
+			<type value="chamber" />
 			<description>You are in a long well-lit gallery extending north and south.</description>
 			<extends dir="south" dest="B-5" text="" />
 			<extends dir="north" dest="B-9" text="" />
@@ -102,6 +116,7 @@
 			<extends dir="northeast" dest="B-A" text="" />
 		</location>
 		<location id="B-8">
+			<type value="chamber" />
 			<description>You are in a long well-lit gallery extending north and south.</description>
 			<extends dir="south" dest="B-6" text="" />
 			<extends dir="southwest" dest="B-5" text="" />
@@ -110,6 +125,7 @@
 			<extends dir="north" dest="B-A" text="" />
 		</location>
 		<location id="B-9">
+			<type value="chamber" />
 			<description>You are in a long well-lit gallery extending north and south.</description>
 			<extends dir="south" dest="B-7" text="" />
 			<extends dir="north" dest="B-B" text="" />
@@ -118,6 +134,7 @@
 			<extends dir="northeast" dest="B-C" text="" />
 		</location>
 		<location id="B-A">
+			<type value="chamber" />
 			<description>You are in a long well-lit gallery extending north and south.</description>
 			<extends dir="south" dest="B-8" text="" />
 			<extends dir="southwest" dest="B-7" text="" />
@@ -126,6 +143,7 @@
 			<extends dir="north" dest="B-C" text="" />
 		</location>
 		<location id="B-B">
+			<type value="chamber" />
 			<description>You are in a long well-lit gallery extending north and south.</description>
 			<extends dir="south" dest="B-9" text="" />
 			<extends dir="north" dest="B-D" text="" />
@@ -134,6 +152,7 @@
 			<extends dir="northeast" dest="B-E" text="" />
 		</location>
 		<location id="B-C">
+			<type value="chamber" />
 			<description>You are in a long well-lit gallery extending north and south.</description>
 			<extends dir="south" dest="B-A" text="" />
 			<extends dir="southwest" dest="B-9" text="" />
@@ -142,12 +161,14 @@
 			<extends dir="north" dest="B-E" text="" />
 		</location>
 		<location id="B-D">
+			<type value="chamber" />
 			<description>You are in a long well-lit gallery extending north and south.</description>
 			<extends dir="south" dest="B-B" text="" />
 			<extends dir="east" dest="B-E" text="" />
 			<extends dir="southeast" dest="B-C" text="" />
 		</location>
 		<location id="B-E">
+			<type value="chamber" />
 			<description>You are in a long well-lit gallery extending north and south.</description>
 			<extends dir="south" dest="B-C" text="" />
 			<extends dir="southwest" dest="B-9" text="" />
@@ -157,6 +178,7 @@
 		</location>
 
 		<location id="C-1">
+			<type value="chamber" />
 			<description>You are in a long well-lit gallery extending east and west.</description>
 			<direction dir="east" dest="A" text="" />
 			<extends dir="south" dest="C-2" text="" />
@@ -164,12 +186,14 @@
 			<extends dir="west" dest="C-3" text="" />
 		</location>
 		<location id="C-2">
+			<type value="chamber" />
 			<description>You are in a long well-lit gallery extending east and west.</description>
 			<extends dir="north" dest="C-1" text="" />
 			<extends dir="northwest" dest="C-3" text="" />
 			<extends dir="west" dest="C-4" text="" />
 		</location>
 		<location id="C-3">
+			<type value="chamber" />
 			<description>You are in a long well-lit gallery extending east and west.</description>
 			<extends dir="east" dest="C-1" text="" />
 			<extends dir="southeast" dest="C-2" text="" />
@@ -178,6 +202,7 @@
 			<extends dir="west" dest="C-5" text="" />
 		</location>
 		<location id="C-4">
+			<type value="chamber" />
 			<description>You are in a long well-lit gallery extending east and west.</description>
 			<extends dir="west" dest="C-2" text="" />
 			<extends dir="northwest" dest="C-1" text="" />
@@ -186,6 +211,7 @@
 			<extends dir="west" dest="C-6" text="" />
 		</location>
 		<location id="C-5">
+			<type value="chamber" />
 			<description>You are in a long well-lit gallery extending east and west.</description>
 			<extends dir="east" dest="C-3" text="" />
 			<extends dir="southeast" dest="C-4" text="" />
@@ -194,6 +220,7 @@
 			<extends dir="west" dest="C-7" text="" />
 		</location>
 		<location id="C-6">
+			<type value="chamber" />
 			<description>You are in a long well-lit gallery extending east and west.</description>
 			<extends dir="west" dest="C-4" text="" />
 			<extends dir="northwest" dest="C-3" text="" />
@@ -202,6 +229,7 @@
 			<extends dir="west" dest="C-8" text="" />
 		</location>
 		<location id="C-7">
+			<type value="chamber" />
 			<description>You are in a long well-lit gallery extending east and west.</description>
 			<extends dir="east" dest="C-5" text="" />
 			<extends dir="southeast" dest="C-6" text="" />
@@ -210,6 +238,7 @@
 			<extends dir="west" dest="C-9" text="" />
 		</location>
 		<location id="C-8">
+			<type value="chamber" />
 			<description>You are in a long well-lit gallery extending east and west.</description>
 			<extends dir="west" dest="C-6" text="" />
 			<extends dir="northwest" dest="C-5" text="" />
@@ -218,6 +247,7 @@
 			<extends dir="west" dest="C-A" text="" />
 		</location>
 		<location id="C-9">
+			<type value="chamber" />
 			<description>You are in a long well-lit gallery extending east and west.</description>
 			<extends dir="east" dest="C-7" text="" />
 			<extends dir="southeast" dest="C-8" text="" />
@@ -226,6 +256,7 @@
 			<extends dir="west" dest="C-B" text="" />
 		</location>
 		<location id="C-A">
+			<type value="chamber" />
 			<description>You are in a long well-lit gallery extending east and west.</description>
 			<extends dir="west" dest="C-8" text="" />
 			<extends dir="northwest" dest="C-7" text="" />
@@ -234,6 +265,7 @@
 			<extends dir="west" dest="C-C" text="" />
 		</location>
 		<location id="C-B">
+			<type value="chamber" />
 			<description>You are in a long well-lit gallery extending east and west.</description>
 			<extends dir="east" dest="C-9" text="" />
 			<extends dir="southeast" dest="C-A" text="" />
@@ -243,6 +275,7 @@
 			<direction dir="north" dest="FA" text="" />
 		</location>
 		<location id="C-C">
+			<type value="chamber" />
 			<description>You are in a long well-lit gallery extending east and west.</description>
 			<extends dir="west" dest="C-A" text="" />
 			<extends dir="northwest" dest="C-9" text="" />
@@ -251,12 +284,14 @@
 			<extends dir="west" dest="C-E" text="" />
 		</location>
 		<location id="C-D">
+			<type value="chamber" />
 			<description>You are in a long well-lit gallery extending east and west.</description>
 			<extends dir="east" dest="C-B" text="" />
 			<extends dir="southeast" dest="C-C" text="" />
 			<extends dir="south" dest="C-E" text="" />
 		</location>
 		<location id="C-E">
+			<type value="chamber" />
 			<description>You are in a long well-lit gallery extending east and west.</description>
 			<extends dir="west" dest="C-C" text="" />
 			<extends dir="northwest" dest="C-B" text="" />
@@ -264,12 +299,14 @@
 		</location>
 
 		<location id="D-1">
+			<type value="chamber" />
 			<description>You are in a narrow gallery extending east and west.
 			Smaller rooms extend to the left and right</description>
 			<direction dir="west" dest="A" text="" />
 			<extends dir="east" dest="D-2" text="" />
 		</location>
 		<location id="D-2">
+			<type value="chamber" />
 			<description>You are in a narrow gallery extending east and west.</description>
 			<extends dir="west" dest="D-1" text="" />
 			<extends dir="east" dest="D-3" text="" />
@@ -277,6 +314,7 @@
 			<direction dir="south" dest="EB" text="" />
 		</location>
 		<location id="D-3">
+			<type value="chamber" />
 			<description>You are in a narrow gallery extending east and west.</description>
 			<extends dir="west" dest="D-2" text="" />
 			<extends dir="east" dest="D-4" text="" />
@@ -284,6 +322,7 @@
 			<direction dir="south" dest="ED" text="" />
 		</location>
 		<location id="D-4">
+			<type value="chamber" />
 			<description>You are in a narrow gallery extending east and west.</description>
 			<extends dir="west" dest="D-3" text="" />
 			<extends dir="east" dest="D-5" text="" />
@@ -291,6 +330,7 @@
 			<direction dir="south" dest="EF" text="" />
 		</location>
 		<location id="D-5">
+			<type value="chamber" />
 			<description>You are in a narrow gallery extending east and west.</description>
 			<extends dir="west" dest="D-4" text="" />
 			<extends dir="east" dest="D-6" text="" />
@@ -298,6 +338,7 @@
 			<direction dir="south" dest="EH" text="" />
 		</location>
 		<location id="D-6">
+			<type value="chamber" />
 			<description>You are in a narrow gallery extending east and west.</description>
 			<extends dir="west" dest="D-5" text="" />
 			<extends dir="east" dest="D-7" text="" />
@@ -305,6 +346,7 @@
 			<direction dir="south" dest="EJ" text="" />
 		</location>
 		<location id="D-7">
+			<type value="chamber" />
 			<description>You are in a narrow gallery extending east and west.</description>
 			<extends dir="west" dest="D-6" text="" />
 			<direction dir="north" dest="EK" text="" />
@@ -313,109 +355,130 @@
 		</location>
 
 		<location id="EA">
+			<type value="chamber" />
 			<description>A treasure room off the main corridor.</description>
 			It is filled with gold.
 			<direction dir="south" dest="D-2" text="" />
 		</location>
 		<location id="EB">
+			<type value="chamber" />
 			<description>A treasure room off the main corridor.</description>
 			It is filled with gold.
 			<direction dir="north" dest="D-2" text="" />
 		</location>
 		<location id="EC">
+			<type value="chamber" />
 			<description>A treasure room off the main corridor.</description>
 			It is filled with gold.
 			<direction dir="south" dest="D-3" text="" />
 		</location>
 		<location id="ED">
+			<type value="chamber" />
 			<description>A treasure room off the main corridor.</description>
 			It is filled with gold.
 			<direction dir="north" dest="D-3" text="" />
 		</location>
 		<location id="EE">
+			<type value="chamber" />
 			<description>A treasure room off the main corridor.</description>
 			It is filled with gold.
 			<direction dir="south" dest="D-4" text="" />
 		</location>
 		<location id="EF">
+			<type value="chamber" />
 			<description>A treasure room off the main corridor.</description>
 			It is filled with gold.
 			<direction dir="north" dest="D-4" text="" />
 		</location>
 		<location id="EG">
+			<type value="chamber" />
 			<description>A treasure room off the main corridor.</description>
 			It is filled with gold.
 			<direction dir="south" dest="D-5" text="" />
 		</location>
 		<location id="EH">
+			<type value="chamber" />
 			<description>A treasure room off the main corridor.
 			It is filled with gold.</description>
 			<direction dir="north" dest="D-5" text="" />
 		</location>
 		<location id="EI">
+			<type value="chamber" />
 			<description>A treasure room off the main corridor.
 			It is filled with gold.</description>
 			<direction dir="south" dest="D-6" text="" />
 		</location>
 		<location id="EJ">
+			<type value="chamber" />
 			<description>A treasure room off the main corridor.</description>
 			It is filled with gold.
 			<direction dir="north" dest="D-6" text="" />
 		</location>
 		<location id="EK">
+			<type value="chamber" />
 			<description>A treasure room off the main corridor.</description>
 			It is filled with gold.
 			<direction dir="south" dest="D-7" text="" />
 		</location>
 		<location id="EL">
+			<type value="chamber" />
 			<description>A treasure room off the main corridor.
 			It is filled with gold.</description>
 			<direction dir="north" dest="D-7" text="" />
 		</location>
 		<location id="EM">
+			<type value="chamber" />
 			<description>A treasure room off the main corridor.</description>
 			It is filled with gold.
 			<direction dir="west" dest="D-7" text="" />
 		</location>
 
 		<location id="FA">
+			<type value="chamber" />
 			<description>You are in a narrow passageway.</description>
 			<direction dir="south" dest="C-B" text="" />
 			<direction dir="north" dest="FB" text="" />
 		</location>
 		<location id="FB">
+			<type value="chamber" />
 			<description>You are in a narrow passageway.</description>
 			<direction dir="south" dest="FA" text="" />
 			<direction dir="north" dest="FC" text="" />
 			<extends dir="east" dest="FD" text="" />
 		</location>
 		<location id="FC">
+			<type value="chamber" />
 			<description>You are in a narrow passageway.</description>
 			<direction dir="south" dest="FB" text="" />
 			<direction dir="north" dest="G-1" text="" />
 		</location>
 		<location id="FD">
+			<type value="chamber" />
 			<description>You are in a narrow passageway.</description>
 			<extends dir="west" dest="FB" text="" />
 			<direction dir="east" dest="FE" text="" />
 		</location>
 		<location id="FE">
+			<type value="chamber" />
 			<description>You are in a large vaulted room.
 			There is treasure, weapons, and armor strewn about.</description>
 			<direction dir="west" dest="FD" text="" />
 			<direction dir="east" dest="FF" text="" />
 		</location>
 		<location id="FF">
+			<type value="chamber" />
 			<description>You are in a small chamber.</description>
 			<direction dir="west" dest="FE" text="" />
 			<direction dir="north" dest="FG" text="" />
 		</location>
 		<location id="FG">
+			<type value="chamber" />
 			<description>You are in a small chamber.</description>
 			<direction dir="south" dest="FF" text="" />
 			<direction dir="north" dest="FH" text="" />
 		</location>
 		<location id="FH">
+			<type value="chamber" />
 			<description>You are in a large, square vault.
 			An immense sarcophagus sits in the middle of the room.
 			The cover is askew, and it appears empty on inspection.</description>
@@ -424,10 +487,12 @@
 			<direction dir="north" dest="FI" text="" />
 		</location>
 		<location id="FI">
+			<type value="chamber" />
 			<description>A small empty room.</description>
 			<direction dir="south" dest="FH" text="" />
 		</location>
 		<location id="FJ">
+			<type value="chamber" />
 			<description>The true burial chamber.
 			A small coffin is in the corner.</description>
 			<direction dir="west" dest="FH" text="" />
@@ -435,6 +500,7 @@
 		</location>
 		<!-- Planetarium -->
 		<location id="G-1">
+			<type value="chamber" />
 			<description>You are in a large circular room.
 			In the center is a reflecting pool. There are paintings of animals
 			and other objects around the wall, connected by lines and circles.</description>
@@ -446,12 +512,14 @@
 			<extends dir="east" dest="G-8" text="" />
 		</location>
 		<location id="G-2">
+			<type value="chamber" />
 			<description>You are in a large circular room.</description>
 			<extends dir="north" dest="G-3" text="" />
 			<extends dir="northeast" dest="G-9" text="" />
 			<extends dir="east" dest="G-1" text="" />
 		</location>
 		<location id="G-3">
+			<type value="chamber" />
 			<description>You are in a large circular room.</description>
 			<extends dir="south" dest="G-2" />
 			<extends dir="southeast" dest="G-1" />
@@ -460,12 +528,14 @@
 			<extends dir="north" dest="G-4" />
 		</location>
 		<location id="G-4">
+			<type value="chamber" />
 			<description>You are in a large circular room.</description>
 			<extends dir="south" dest="G-3" />
 			<extends dir="southeast" dest="G-9" />
 			<extends dir="east" dest="G-5" />
 		</location>
 		<location id="G-5">
+			<type value="chamber" />
 			<description>You are in a large circular room.</description>
 			<extends dir="west" dest="G-4" />
 			<extends dir="southwest" dest="G-3" />
@@ -474,12 +544,14 @@
 			<extends dir="east" dest="G-6" />
 		</location>
 		<location id="G-6">
+			<type value="chamber" />
 			<description>You are in a large circular room.</description>
 			<extends dir="west" dest="G-5" />
 			<extends dir="southwest" dest="G-9" />
 			<extends dir="south" dest="G-7" />
 		</location>
 		<location id="G-7">
+			<type value="chamber" />
 			<description>You are in a large circular room.</description>
 			<extends dir="north" dest="G-6" />
 			<extends dir="northwest" dest="G-5" />
@@ -488,12 +560,14 @@
 			<extends dir="south" dest="G-8" />
 		</location>
 		<location id="G-8">
+			<type value="chamber" />
 			<description>You are in a large circular room.</description>
 			<extends dir="north" dest="G-7" />
 			<extends dir="northwest" dest="G-9" />
 			<extends dir="west" dest="G-1" />
 		</location>
 		<location id="G-9">
+			<type value="chamber" />
 			<description>You are in a large circular room.</description>
 			<extends dir="north" dest="G-5" />
 			<extends dir="northeast" dest="G-6" />
@@ -510,6 +584,7 @@
 		</location>
 		
 		<location id="I-1">
+			<type value="ledge" />
 			<description>You are outside the Well of Souls caves, deep underground.
 			The path here is a narrow ledge between the rock wall of the 
 			Well of Souls temple complex and the underground river.
@@ -521,6 +596,7 @@
 			<dropoff dir="south" dest="River" text="Oh no! You have fallen into the icy waters." effect="die" />
 		</location>
 		<location id="I-2">
+			<type value="ledge" />
 			<description>You are on a narrow ledge above a swift, underground river.
 			There seems to be a bridge that crosses the river to the west.</description>
 			<extends dir="west" dest="I-3" text="" />
@@ -528,6 +604,7 @@
 			<dropoff dir="south" dest="River" text="Oh no! You have fallen into the icy waters." effect="die" />
 		</location>
 		<location id="I-3">
+			<type value="ledge" />
 			<description>You are on a narrow ledge above a swift, underground river.
 			There is a bridge that crosses the river to the south.</description>
 			<extends dir="west" dest="I-4" text="" />
@@ -535,59 +612,69 @@
 			<direction dir="south" dest="bridge-1" text="" />
 		</location>
 		<location id="I-4">
+			<type value="ledge" />
 			<description>You are on a narrow ledge above a swift, underground river.
 			There seems to be a bridge that crosses the river to the east.</description>
 			<extends dir="east" dest="I-3" text="" />
 			<dropoff dir="south" dest="River" text="Oh no! You have fallen into the icy waters." effect="die" />
 		</location>
 		<location id="bridge-1">
+			<type value="chamber" />
 			<description>You are on a rickety old bridge across a deep gorge.
 			Below you rages the River of the Dead, a cold, fast-flowing subterranean river.</description>
 			<direction dir="north" dest="I-3" text="" />
 			<direction dir="south" dest="I-4A" text="" />
 		</location>
 		<location id="I-4A">
+			<type value="chamber" />
 			<description>You are in the circular tower.
 			It is the entrance to the Church of the Living.</description>
 			<direction dir="north" dest="bridge-1" text="" />
 		</location>
 		<location id="I-5">
+			<type value="ledge" />
 			<description>You are on a narrow ledge above a swift, underground river.</description>
 			<extends dir="west" dest="I-1" text="" />
 			<extends dir="east" dest="I-6" text="" />
 			<dropoff dir="south" dest="River" text="Oh no! You have fallen into the icy waters." effect="die" />
 		</location>
 		<location id="I-6">
+			<type value="ledge" />
 			<description>You are on a narrow ledge above a swift, underground river.</description>
 			<extends dir="west" dest="I-5" text="" />
 			<extends dir="east" dest="I-7" text="" />
 			<dropoff dir="south" dest="River" text="Oh no! You have fallen into the icy waters." effect="die" />
 		</location>
 		<location id="I-7">
+			<type value="ledge" />
 			<description>You are on a narrow ledge above a swift, underground river.</description>
 			<extends dir="west" dest="I-6" text="" />
 			<extends dir="east" dest="I-8" text="" />
 			<dropoff dir="south" dest="River" text="Oh no! You have fallen into the icy waters." effect="die" />
 		</location>
 		<location id="I-8">
+			<type value="ledge" />
 			<description>You are on a narrow ledge above a swift, underground river.</description>
 			<extends dir="west" dest="I-7" text="" />
 			<extends dir="east" dest="I-9" text="" />
 			<dropoff dir="south" dest="River" text="Oh no! You have fallen into the icy waters." effect="die" />
 		</location>
 		<location id="I-9">
+			<type value="ledge" />
 			<description>You are on a narrow ledge above a swift, underground river.</description>
 			<extends dir="west" dest="I-8" text="" />
 			<extends dir="east" dest="I-A" text="" />
 			<dropoff dir="south" dest="River" text="Oh no! You have fallen into the icy waters." effect="die" />
 		</location>
 		<location id="I-A">
+			<type value="ledge" />
 			<description>You are on a narrow ledge above a swift, underground river.</description>
 			<extends dir="west" dest="I-9" text="" />
 			<extends dir="east" dest="I-B" text="" />
 			<dropoff dir="south" dest="River" text="Oh no! You have fallen into the icy waters." effect="die" />
 		</location>
 		<location id="I-B">
+			<type value="ledge" />
 			<description>You are on a narrow ledge above a swift, underground river.
 				The ledge appears particularly narrow to the east.</description>
 			<extends dir="west" dest="I-A" text="" />
@@ -595,6 +682,7 @@
 			<dropoff dir="south" dest="River" text="Oh no! You have fallen into the icy waters." effect="die" />
 		</location>
 		<location id="I-C">
+			<type value="ledge" />
 			<description>You are on a narrow ledge above a swift, underground river.
 				The ledge is very narrow here.</description>
 			<extends dir="west" dest="I-B" text="" />
@@ -603,6 +691,7 @@
 			<dropoff dir="south" dest="River" text="Oh no! You have fallen into the icy waters." effect="die" />
 		</location>
 		<location id="I-D">
+			<type value="ledge" />
 			<description>You are on a narrow ledge above a swift, underground river.
 				There is a tunnel leading down through the ledge. 
 				The ledge appears particularly narrow to the west.</description>

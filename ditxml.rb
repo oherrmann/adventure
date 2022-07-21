@@ -55,44 +55,61 @@ module Adventure
 				@vars["type"] ||= attrs["type"]
 			elsif @reading
 				case name
-					when "description"
-						@read_description = true
-					when "type"
-						@vars["type"] ||= attrs["value"]
-					when "direction", "extends", "dropoff"
-						x = GDirection.new( name, attrs["dir"], attrs["dest"], attrs["text"] )
-						x.file = attrs["file"] if attrs["file"]
-						x.effect = attrs["effect"] if attrs["effect"]
-						@exits[ x.directions ] = x
-					when "doorway"
-						x = Adventure::GDoor.new( attrs["id"].to_i )
-						x.state = attrs["status"]
-						@doorways << x
-						x = GDirection.new("doorway", attrs["dir"], attrs["dest"], attrs["text"] )
-						x.file = attrs["file"] if attrs["file"]
-						x.effect = attrs["effect"] if attrs["effect"]
-						x.door_id = attrs["id"].to_i
-						@exits[ x.directions ] = x
-					when "light"
-						@vars["light"] ||= attrs["value"].to_i
-					when "conditions"
-						@vars["light"] ||= attrs["light"].to_i
-						@vars["temp"] ||= attrs["temp"].to_i
-						@vars["water"] ||= ( attrs["value"] == "true" )
-					when "water"
-						@vars["water"] ||= ( attrs["value"] == "true" )
-						@vars["water_ok"] ||= ( attrs["potable"] == "true" )
-					when "food"
-						x = Adventure::GFood.new( attrs["type"], attrs["quantity"], attrs["effect"], attrs["grow"] )
-						@food << x
-					when "object"
-						@vars["object"] ||= []
-						@vars["object"] << attrs
-					when "accident"
-						x = GAccident.new( attrs["type"], attrs["roll"], attrs["effect"], attrs["dir"], attrs["text"] )
-						x.die = attrs["die"] unless attrs["die"].nil?
-						@vars["accident"] ||= []
-						@vars["accident"] << x
+				when "description"
+					@read_description = true
+				when "type"
+					@vars["type"] ||= attrs["value"]
+				when "direction", "extends", "dropoff"
+					x = GDirection.new( name, attrs["dir"], attrs["dest"], attrs["text"] )
+					x.file = attrs["file"] if attrs["file"]
+					x.effect = attrs["effect"] if attrs["effect"]
+					@exits[ x.directions ] = x
+				when "doorway"
+					x = Adventure::GDoor.new( attrs["id"].to_i )
+					x.state = attrs["status"]
+					@doorways << x
+					x = GDirection.new("doorway", attrs["dir"], attrs["dest"], attrs["text"] )
+					x.file = attrs["file"] if attrs["file"]
+					x.effect = attrs["effect"] if attrs["effect"]
+					x.door_id = attrs["id"].to_i
+					@exits[ x.directions ] = x
+				when "light"
+					@vars["light"] ||= attrs["value"].to_i
+				when "conditions"
+					@vars["light"] ||= attrs["light"].to_i
+					@vars["temp"] ||= attrs["temp"].to_i
+					@vars["water"] ||= ( attrs["value"] == "true" )
+				# <peek> tags show us a preview of what we might see when we look into a room.
+				# The information in this tag is not revealed unless we use the "look <direction>" 
+				# command. If there is a monster or water or food we might be able to pick up on
+				# that as well. The "peek" information is placed in a GDirection object since it 
+				# can handle this information (basically, peek-ing is like go-ing in a direction
+				# without the follow-through. You can't generally peek through a doorway, but maybe
+				# there is a keyhole or something. If there is no <peek> tag for an exit, then 
+				# there is probably nothing that can be seen. 
+				# NOTE: LocationListener is not used to check the "peek" solution. That is only done
+				# in the PeekListener
+				#when "peek"
+					#x = GDirection.new( name, attrs["dir"], attrs["dest"], attrs["text"] )
+					# Water is treated as a food, but it does not grow and it never runs out. 
+				when "water"
+					#@vars["water"] ||= ( attrs["value"] == "true" )
+					#@vars["water_ok"] ||= ( attrs["potable"] == "true" )
+					x = Adventure::GFood.new( "water", attrs["quantity"], attrs["effect"], false )
+					x.seen = true
+					@food << x
+				when "food"
+					x = Adventure::GFood.new( attrs["type"], attrs["quantity"], attrs["effect"], attrs["grow"] )
+					@food << x
+				when "object"
+					@vars["object"] ||= []
+					@vars["object"] << attrs
+					#puts attrs.inspect
+				when "accident"
+					x = GAccident.new( attrs["type"], attrs["roll"], attrs["effect"], attrs["dir"], attrs["text"] )
+					x.die = attrs["die"] unless attrs["die"].nil?
+					@vars["accident"] ||= []
+					@vars["accident"] << x
 				end
 			end
 		end
@@ -141,6 +158,57 @@ module Adventure
 		end
 		
 	end # LocationListener class
+
+	# > @peeker = Adventure::PeekListener.new(@location)
+	# > @peeker.do(@gamefile)
+	# > @peek = @peeker.peek
+	class PeekListener
+		include REXML::StreamListener
+
+		def initialize( identity )
+			@reading = false
+			@identity = identity
+			@found = false
+			@peek = []
+		end
+		
+		def tag_start( name, attrs )
+			if name == "location" && attrs["id"] == @identity
+				@reading = true
+				@found = true
+			elsif @reading
+				case name
+				# <peek> tags show us a preview of what we might see when we look into a room.
+				# The information in this tag is not revealed unless we use the "look <direction>" 
+				# command. If there is a monster or water or food we might be able to pick up on
+				# that as well. The "peek" information is placed in a GDirection object since it 
+				# can handle this information (basically, peek-ing is like go-ing in a direction
+				# without the follow-through. You can't generally peek through a doorway, but maybe
+				# there is a keyhole or something. If there is no <peek> tag for an exit, then 
+				# there is probably nothing that can be seen. 
+				when "peek"
+					x = GDirection.new( name, attrs["dir"], attrs["dest"], attrs["text"] )
+					@peek << x
+				end
+			end
+		end
+
+		def tag_end( name )
+			@reading && name == "location" ? @reading = false : nil
+		end
+		
+		def do( file )
+			# Add error trapping!!!
+			Document.parse_stream( File.new( file ), self )
+			return @found
+		end
+		
+		def peek
+			return @peek
+		end
+		
+	end # PeekListener class
+
 
 	# The IntroductionListener has the sole job of pulling the game introduction from the XML
 	# file. If there are more needs for this type of listener, then we'll create a generic

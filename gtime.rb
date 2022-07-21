@@ -9,9 +9,18 @@
 class GTime
 	
 	# Create a GTime object
-	def initialize()
-		@time = 0
+	def initialize( time = 0 )
+		@time = time
 	end
+	
+	# Determine the days/hours/mins/secs from the number of seconds given,
+	# which is going to be the result of subtracting two Time values.
+  def GTime.day_fraction_to_time(fr)
+		days, seconds = fr.divmod(86400)
+		hours, seconds = seconds.divmod(3600)
+		mins, seconds = seconds.divmod(60)
+    return days, hours, mins, seconds
+  end
 	
 	# Reset the GTime object to its initial state
 	def reset
@@ -19,6 +28,15 @@ class GTime
 		return self
 	end
 	
+	def pretty( level = 0 )
+		indent = ( "  " * level )
+		indent2 = ( "  " * ( level + 1 ) )
+		result = indent + "<" + self.class.name + ":<GObject>"
+		result += "\n" + indent2 + "@time:" + @time.to_s
+		result += "\n" + indent + ">"
+		return result
+	end
+
 	# Set the hours of the GTime object. The number of hours are added
 	# to whatever is currently in the object.
 	def hours=(hours)
@@ -180,10 +198,10 @@ end # Numeric class
 class Date
   SECONDS_IN_DAY = 86400
   def self.day_fraction_to_time(fr)
-    ss,  fr = fr.divmod(86_400) # 4p
-    h,   ss = ss.divmod(3600)
-    min, s  = ss.divmod(60)
-    return h, min, s, fr
+		days, seconds = fr.divmod(86400)
+		hours, seconds = seconds.divmod(3600)
+		mins, seconds = seconds.divmod(60)
+    return days, hours, mins, seconds
   end
 end
 

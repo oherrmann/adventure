@@ -1,11 +1,13 @@
 <!-- ditxml version=0.0.1  -->
 <!--  -->
 <game>
-	<intro>You are at the entrance to an underground cave structure.
-	You hear water dripping against stone in the cave.</intro>
+	<intro>This is the Ruby Caves Adventure game. Your goal is to explore the
+	cave system and find as much treasure as possible without being killed by
+	monsters, natural occurrences, or your own inability to keep yourself alive.
+	Good luck. </intro>
 	<locations>
 		<location id='Intro'>
-			<type value="chamber" />
+			<type value="outside" />
 			<description>You are in a grassy opening in the middle of a forest.
 			To your north is a cave entrance.</description>
 			<direction dir="north" dest="A" text="" />
@@ -27,7 +29,9 @@
 			to the west. There are two chambers to the west.</description>
 			<direction dir="south" dest="A" text="" />
 			<direction dir="west-1" dest="C" text="" />
-			<direction dir='west-2' dest='B-1' text='' />
+			<peek dir="west-1" dest="C" text="A large dimly lit chamber. " />
+			<direction dir="west-2" dest="B-1" text="" />
+			<peek dir="west-2" dest="B-1" text="A small alcove to one side of this chamber. " />
 			<light value="20" />
 			<object id="torch" description="a torch" />
 		</location>
@@ -46,6 +50,7 @@
 			You hear water to your north.</description>
 			<direction dir="east" dest="B" text="" />
 			<direction dir="north" dest="D" text="" />
+			<peek dir="north" dest="D" text="The entrance looks tight, but you can make it." />
 			<light value="10" />
 		</location>
 		<location id='D'>
@@ -57,12 +62,11 @@
 		</location>
 		<location id='E'>
 			<type value="chamber" />
-			<description>Another tight chamber. You feel a breeze to your north.
-				You see a glint of metal on the wall of the cave. </description>
+			<description>Another tight chamber. You feel a breeze to your north. </description>
 			<direction dir="west" dest="D" text="" />
 			<direction dir="north" dest="F-1" text="" />
-			<object name="sword" description="a sword" effect="hit+20" size="3" weight="10" 
-				hidden="true" />
+			<object id="cfeef1b9-3015-4365-80ce-437c242bd0b2" name="sword" description="a sword" effect="hit+20" size="3" weight="10" 
+				hidden="true" hidden_text="Your torch catches a glint of metal on the wall of the cave. " />
 			<light value="5" />
 		</location>
 		<location id='F-1' type="chamber">
@@ -129,7 +133,7 @@
 			<extends dir="south" dest="F-6" text="" />
 			<direction dir="west" dest="K" text="" />
 			<light value="10" />
-			<water value="true" potable="true" />
+			<water quantity="10" effect="ths-100;tim+10" />
 		</location>
 		<location id='G'>
 			<type value="chamber" />

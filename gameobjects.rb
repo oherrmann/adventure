@@ -12,6 +12,10 @@ class Object
 	def is_gobject?
 		return false
 	end
+	def not_nil?
+		if self.class <= NilClass then return false end
+		return true
+	end
 end
 
 module EventDispatcher
@@ -47,10 +51,11 @@ module Adventure
 			@moveable = true
 			@damaged = 0         # Damaged = 0..20; requires a Die.roll(20) to see if it will work.
 			setup_listeners()
+			@hidden_text
 		end
 		
 		attr_reader :name, :description
-		attr_accessor :seen, :hidden, :moveable, :damaged
+		attr_accessor :seen, :hidden, :moveable, :damaged, :subscriptions, :hidden_text
 		
 		def is_gobject?
 			return true
@@ -100,8 +105,14 @@ module Adventure
 		
 		def mass_set_attr( attr )
 			@attributes = {}
-			attr.each_pair do |key,val|
-				self.set_attr( key.to_sym, val )
+			attr.each_pair {|key,val|
+				@attributes[ key.to_sym ] = val
+			}
+		end
+		
+		def each_attr
+			@attributes.keys.each do |key|
+				yield key
 			end
 		end
 		
@@ -133,9 +144,9 @@ module Adventure
 		def pretty(level=0)
 			indent = ( "  " * level )
 			indent2 = ( "  " * ( level + 1 ) )
-			result = indent + "<" + self.class.name + ":" + self.object_id.to_s
-			result += "\n" + indent2 + "@name:" + @name
-			result += "\n" + indent2 + "@desc:" + @description
+			result = indent + "<" + self.class.name + ":<GObject>"
+			result += "\n" + indent2 + "@name:" + @name.to_s
+			result += "\n" + indent2 + "@desc:" + @description.to_s
 			result += "\n" + indent2 + "@damaged:" + @damaged.to_s
 			result += "\n" + indent2 + "{seen:" + @seen.pretty + ",hidden:" + @hidden.pretty 
 			result += ",moveable:" + @moveable.pretty + "}"
